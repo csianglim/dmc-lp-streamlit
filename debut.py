@@ -46,47 +46,7 @@ with st.sidebar:
 	with cols[1]:
 		MV2Cost = st.number_input(r'Reflux FC Cost', value=-1.0, step=0.1)	
 
-st.title('DMC LP Intro')
 
-with st.expander('Model', expanded=True):
-	row1=st.columns([0.55, 0.45])
-with st.expander('Linear Program', expanded=True):	
-	row2=st.columns([0.55, 0.45])
-with row1[1]:
-	st.image('column.png', caption='Figure 1: Simple debutanizer column. Details see: https://arxiv.org/abs/2202.13291')
-with row1[0]:
-	st.header("Debutanizer Column")
-	st.markdown("Consider a simple debutanizer column as shown in Figure 1. The control objective for this column is to maintain a maximum RVP target required by product specs in the bottom stream and minimize C5s in the overhead stream.")
-	st.markdown("Let's assume that there are only 2 manipulated variables (MVs) available, the reflux flow rate in the overhead, and the reboiler temperature in the bottoms. We must use those 2 MVs to control the RVP and C5s, our 2 controlled variables (CVs).")
-	st.subheader("Gain Matrix")
-	st.markdown(r"Consider a $2\times2$ gain matrix, $G$ with 2 MVs and 2 CVs. There will be 4 elements, where each $G_{ij}$ describes the *steady-state* relationship between $\text{CV}_{i}$ and $\text{MV}_{j}$.")	
-	st.markdown(r"For this debutanizer column, the gains are:")	
-	d = {'Reboiler TC': [G11, G12], 'Reflux FC': [G21, G22]}
-	st.dataframe(pd.DataFrame(d, index=['RVP', 'C5']).style.format("{:.3f}"))
-	# st.write("<div style='text-align: center;'>" + pd.DataFrame(d, index=['C5', 'RVP']).to_html() + "/<div>", unsafe_allow_html=True)
-	st.markdown("The equation relating the CVs and MVs through the gain matrix is given by:")
-	st.latex(r"\Delta CV = G \cdot \Delta MV")	
-	st.latex(rf"G = \begin{{bmatrix}} \
-	        G_{{11}} & G_{{12}} \\ \
-	        G_{{21}} & G_{{22}} \
-	    \end{{bmatrix}} = \begin{{bmatrix}} \
-	        {G11:.3f} & {G12:.3f} \\ \
-	        {G21:.3f} & {G22:.3f} \
-	    \end{{bmatrix}}")
-	st.markdown("Multiplying the terms in the matrix, we get:")
-	st.latex(rF"\begin{{align}}\Delta \text{{RVP}} &= {G11:.3f} \cdot \Delta \text{{TC}}_\text{{Reboiler}} + {G12:.3f} \cdot \Delta \text{{FC}}_{{Reflux}}\\ \Delta \text{{C5}} &= {G21:.3f} \cdot \Delta \text{{TC}}_{{Reboiler}} + {G22:.3f} \cdot \Delta \text{{FC}}_{{Reflux}} \end{{align}}")
-with row2[1]:
-	st.image('ranade.png', caption="From: Ranade, S. M., & Torres, E. (2009). From dynamic mysterious control to dynamic manageable control. Hydrocarbon Processing, 88(3), 77-81.")
-with row2[0]:
-	st.header('Linear Program')
-	st.markdown('The LP steady-state (SS) optimizer is responsible for generating SS targets for the move calculations. We will look at this component first, and the Prediction and Move Plan modules in subsequent notebooks.')
-
-	st.markdown("The feasible region tells us that the LP optimizer is allowed to move $\Delta MV_1$ and $\Delta MV_2$ within the shaded region to honour the CV limits. The question now is, out of all the possible points in the feasible region, which one should the optimizer pick and why?")
-	st.markdown("The objective function in DMC is defined as a cost minimization function based on MV movements. The equations below are a simplified version of the actual objective function (see *Sorensen, R. C., & Cutler, C. R. (1998)* for details).")
-	st.markdown("We want to assign an 'LP cost' to each MV, based on the economics and desired directionality of MV movement. For 2 MVs, we get:")
-	st.latex(r"\min_{\Delta MV_1, \Delta MV_2} f(\Delta MV_1, \Delta MV_2) = c_1 \Delta MV_1 + c_2 \Delta MV_2")
-	st.markdown("As a rule of thumb, a negative LP cost would incentivize the DMC LP to maximize that variable, and likewise, a positive cost would incentivize the DMC LP to minimize that variable. However, there are exceptions as we will see later on. For now, let's assume that we have the following LP costs: $c_1 = -1$, $c_2 = -1$.")
-## Model
 
 limits = 10
 d = np.linspace(-limits, limits, 100)
@@ -139,51 +99,124 @@ prob += MV2 <= MV2Hi, "MV2 High Limit"
 
 # The problem is solved using PuLP's choice of Solver
 prob.solve(PULP_CBC_CMD(msg=0))
+soln = [v.varValue for v in prob.variables()]
+V = prob.objective.value()
 
 # Each of the variables is printed with it's resolved optimum value
 #     for v in prob.variables():
 #         print(v.name, "=", v.varValue)
-
-soln = [v.varValue for v in prob.variables()]
-V = prob.objective.value()
 
 dvec = np.linspace(-limits + (0.1*limits), limits - (0.1*limits), 12)
 xv, yv = np.meshgrid(dvec, dvec)
 y_obj = (1/MV2Cost)*V - (MV1Cost/MV2Cost)*d
 z_obj = (MV1Cost * xv) + (MV2Cost * yv)
 
-fig, ax = plt.subplots()
-ax.imshow((c1 & c2 & c3 & c4 & m1 & m2).astype(int), extent=(x.min(),x.max(),y.min(),y.max()), origin="lower", cmap="binary", alpha=0.1);
-ax.plot(d, y_c1, '-r', label='CV1_Hi');
-ax.plot(d, y_c2, '--r', label='CV1_Lo');
-ax.plot(d, y_c3, '-b', label='CV2_Hi');
-ax.plot(d, y_c4, '--b', label='CV2_Lo');
+def plotLP(showVector=True, showOptimum=True):
+	fig, ax = plt.subplots()
+	ax.imshow((c1 & c2 & c3 & c4 & m1 & m2).astype(int), extent=(x.min(),x.max(),y.min(),y.max()), origin="lower", cmap="binary", alpha=0.1);
+	ax.plot(d, y_c1, '-r', label='CV1_Hi');
+	ax.plot(d, y_c2, '--r', label='CV1_Lo');
+	ax.plot(d, y_c3, '-b', label='CV2_Hi');
+	ax.plot(d, y_c4, '--b', label='CV2_Lo');
 
-ax.axvline(x=0, color='black', lw=0.1, linestyle='--')
-ax.axhline(y=0, color='black', lw=0.1, linestyle='--')
+	ax.axvline(x=0, color='black', lw=0.1, linestyle='--')
+	ax.axhline(y=0, color='black', lw=0.1, linestyle='--')
 
-ax.axvline(x=MV1Lo, color='green', lw=1, linestyle=':', label=f'MV1_Lo')
-ax.axvline(x=MV1Hi, color='green', lw=1, linestyle=':', label=f'MV1_Hi')
-ax.axhline(y=MV2Lo, color='green', lw=1, linestyle=':', label=f'MV2_Lo')
-ax.axhline(y=MV2Hi, color='green', lw=1, linestyle=':', label=f'MV2_Hi')
+	ax.axvline(x=MV1Lo, color='green', lw=1, linestyle=':', label=f'MV1_Lo')
+	ax.axvline(x=MV1Hi, color='green', lw=1, linestyle=':', label=f'MV1_Hi')
+	ax.axhline(y=MV2Lo, color='green', lw=1, linestyle=':', label=f'MV2_Lo')
+	ax.axhline(y=MV2Hi, color='green', lw=1, linestyle=':', label=f'MV2_Hi')
 
-ax.plot(0,0,'kx');
-ax.plot(soln[0], soln[1], 'ok');
+	ax.plot(0,0,'kx');
 
-# the obj func
-ax.plot(d, y_obj, '-.k');
+	# the obj func
+	if showOptimum:
+		ax.plot(soln[0], soln[1], 'ok');
+		ax.plot(d, y_obj, '-.k');
 
-# plot vector field to show the direction of optimization (direction of decreasing cost)
-ax.quiver(xv, yv,-MV1Cost,-MV2Cost, z_obj, cmap='gray', headwidth=4, width=0.003, scale=40, alpha=0.35)
+	# plot vector field to show the direction of optimization (direction of decreasing cost)
+	if showVector:
+		ax.quiver(xv, yv,-MV1Cost,-MV2Cost, z_obj, cmap='gray', headwidth=4, width=0.003, scale=40, alpha=0.35)
 
-ax.set_xlim((-limits, limits))
-ax.set_ylim((-limits, limits))
-ax.set_xlabel('Reboiler TC Moves')
-ax.set_ylabel('Reflux FC Moves')
-plt.gca().xaxis.set_major_formatter(StrMethodFormatter('{x:,.0f}')); # No decimal places
-plt.gca().yaxis.set_major_formatter(StrMethodFormatter('{x:,.0f}')); # No decimal places
+	ax.set_xlim((-limits, limits))
+	ax.set_ylim((-limits, limits))
+	ax.set_xlabel('Reboiler TC Moves')
+	ax.set_ylabel('Reflux FC Moves')
+	plt.gca().xaxis.set_major_formatter(StrMethodFormatter('{x:,.0f}')); # No decimal places
+	plt.gca().yaxis.set_major_formatter(StrMethodFormatter('{x:,.0f}')); # No decimal places
 
-# plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.02), ncol=5);
+	# plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.02), ncol=5);
+	return fig
+
+st.title('DMC LP Intro')
+
+with st.expander('Model', expanded=True):
+	row1=st.columns([0.55, 0.45])
+with st.expander('Linear Program', expanded=True):	
+	row2=st.columns([0.55, 0.45])
+	row3=st.columns([0.55, 0.45])
+with row1[1]:
+	st.image('column.png', caption='Figure 1: Simple debutanizer column. Details see: https://arxiv.org/abs/2202.13291')
+with row1[0]:
+	st.header("Debutanizer Column")
+	st.markdown("Consider a simple debutanizer column as shown in Figure 1 that's configured with an APC (Advanced Process Control) system with 2 manipulated variables (MVs) and 2 controlled variables (CVs). The 2 MVs are the reflux flow rate in the overhead, and the reboiler temperature in the bottoms. The 2 CVs are the bottoms RVP and the overhead C5. The control objective for this column is to maintain a maximum RVP target required by product specs in the bottom stream and minimize C5s in the overhead stream.")
+	st.subheader("Gain Matrix")
+	st.markdown(r"Consider a $2\times2$ gain matrix, $G$ with 2 MVs and 2 CVs. There will be 4 elements, where each $G_{ij}$ describes the *steady-state* relationship between $\text{CV}_{i}$ and $\text{MV}_{j}$.")	
+	st.markdown(r"For this debutanizer column, the gains are:")	
+
+	varvals = {'Reboiler TC': [G11, G21], 'Reflux FC': [G12, G22]}
+	st.dataframe(pd.DataFrame(varvals, index=['RVP', 'C5']).style.format("{:.3f}"))
+
+	st.markdown("The equation relating the CVs and MVs through the gain matrix is given by:")
+	st.latex(r"\Delta CV = G \cdot \Delta MV")	
+	st.latex(rf"G = \begin{{bmatrix}} \
+	        G_{{11}} & G_{{12}} \\ \
+	        G_{{21}} & G_{{22}} \
+	    \end{{bmatrix}} = \begin{{bmatrix}} \
+	        {G11:.3f} & {G12:.3f} \\ \
+	        {G21:.3f} & {G22:.3f} \
+	    \end{{bmatrix}}")
+	st.markdown("Using the gain matrix, the CV relationships can be written in terms of its MVs:")
+	st.latex(rF"\begin{{align}}\Delta \text{{RVP}} &= {G11:.3f} \cdot \Delta \text{{TC}}_\text{{Reboiler}} + {G12:.3f} \cdot \Delta \text{{FC}}_{{Reflux}}\\ \Delta \text{{C5}} &= {G21:.3f} \cdot \Delta \text{{TC}}_{{Reboiler}} + {G22:.3f} \cdot \Delta \text{{FC}}_{{Reflux}} \end{{align}}")
+
+	st.info(f"The gain matrix tells us that: Every unit increase in reboiler temperature reduces RVP by {G11} units and increases C5 by {G21} units. This makes sense, if we fire the reboiler harder, we boil stuff up the top so the bottom RVP decreases (less volatile, more heavier components), and some of the heavier components go up the column, so overhead C5 increases. Every unit increase in reflux reduces RVP by {G12} units and reduces C5 by {G22} units. This also makes sense, because increasing reflux improves separation and washes down the heavier materials from the top. Separation is improved up to a certain point, considering flooding limits etc.")
+	st.subheader("Matrix Conditioning")
+	st.write("TBD")
+
+with row2[1]:
+	st.image('ranade.png', caption="Figure 2: The 3 main DMC modules. From Ranade, S. M., & Torres, E. (2009). From dynamic mysterious control to dynamic manageable control. Hydrocarbon Processing, 88(3), 77-81.")
+with row2[0]:
+	st.header('Linear Program')
+	st.markdown('The LP steady-state (SS) optimizer is responsible for generating SS targets for the move calculations. We will look at this component first.')
+	st.markdown("We can impose upper and lower limits on the MVs. These are *hard constraints* that cannot be violated.")
+	st.latex(r"\text{MV}_{1, \text{Lo}} \leq \text{MV}_{1} \leq \text{MV}_{1, \text{Hi}}\\\text{MV}_{2, \text{Lo}} \leq \text{MV}_{2} \leq \text{MV}_{2, \text{Hi}}\\")
+	st.markdown("We can also impose upper and lower limits on the CVs. These are *soft constraints* that can be relaxed if the LP problem is infeasible.")
+	st.latex(r"\text{CV}_{1, \text{Lo}} \leq \text{CV}_{1} \leq \text{CV}_{1, \text{Hi}}\\\text{CV}_{2, \text{Lo}} \leq \text{CV}_{2} \leq \text{CV}_{2, \text{Hi}}\\")
+	st.info("MV limits are **hard constraints** which will not be violated. CV limits are **soft constraints** that can be violated if the LP problem is infeasible. A DMC tuning parameter called the **CV Rank** is used to determine the priority of CVs, with 1 being the most important and 999 being the least important.")
+	st.markdown("Since the CVs are related to the MVs by the gain matrix, we can substitute the equations to get CV limits in terms of MV movements:")
+	st.latex(r"G_{11} \Delta \text{MV}_{1} + G_{12} \Delta \text{MV}_{2} \leq \Delta \text{CV}_{1, \text{Hi}}\\G_{11} \Delta \text{MV}_{1} + G_{12} \Delta \text{MV}_{2} \geq \Delta \text{CV}_{1, \text{Lo}}\\G_{21} \Delta \text{MV}_{1} + G_{22} \Delta \text{MV}_{2} \leq \Delta \text{CV}_{2, \text{Hi}} \\G_{21} \Delta \text{MV}_{1} + G_{22} \Delta \text{MV}_{2} \geq \Delta \text{CV}_{2, \text{Lo}} \\")
+	st.markdown("For this debutanizer problem, the current measurements captured at one particular steady-state, and the limits for the MVs and CVs are:")
+
+	varvals = {'Reboiler TC': [MV1LoSS, MV1SSVal, MV1HiSS], 
+	     'Reflux FC': [MV2LoSS, MV2SSVal, MV2HiSS],
+	     'RVP': [CV1LoSS, CV1SSVal, CV1HiSS],
+	     'C5': [CV2LoSS, CV2SSVal, CV2HiSS],
+	     }
+	st.dataframe(pd.DataFrame(varvals, index=['Lower Limit', 'Current Value', 'Upper Limit']).T.style.format("{:.1f}"))
+
+with row3[1]:
+	st.pyplot(plotLP(showVector=False, showOptimum=False))
+with row3[0]:
+	st.subheader("Feasible Region")
+	st.markdown("We can plot the MV and CV limits as a function of MV movements. The limits are linear, so each limit forms a straight line. Since the limits are inequalities, the limit is actually a half-plane, where all points on one side satisfy the inequality. If we take the intersection of all the half-planes, we get a shaded area as shown in the figure on the right. The shaded area is known as the `feasible region` or `solution space` in the LP problem. It is defined based on the current process conditions and the distance of each variable from its constraints.")
+
+	st.subheader("Objective Function and LP Costs")
+	st.markdown("The feasible region tells us that the LP optimizer is allowed to move $\Delta MV_1$ and $\Delta MV_2$ within the shaded region to honour the CV limits. The question now is, out of all the possible points in the feasible region, which one should the optimizer pick and why?")
+	st.markdown("The objective function in DMC is defined as a cost minimization function based on MV movements. The equations below are a simplified version of the actual objective function (see *Sorensen, R. C., & Cutler, C. R. (1998)* for details).")
+	st.markdown("We want to assign an 'LP cost' to each MV, based on the economics and desired directionality of MV movement. For 2 MVs, we get:")
+	st.latex(r"\min_{\Delta MV_1, \Delta MV_2} f(\Delta MV_1, \Delta MV_2) = c_1 \Delta MV_1 + c_2 \Delta MV_2")
+	st.markdown("As a rule of thumb, a negative LP cost would incentivize the DMC LP to maximize that variable, and likewise, a positive cost would incentivize the DMC LP to minimize that variable. However, there are exceptions as we will see later on.")
+	st.info("For now, let's assume that we have the following LP costs: $c_1 = -1$, $c_2 = -1$.")
 
 def dir_text(soln):
 	return "<span style='color:blue'>🠉</span> Up" if soln > 0 else "<span style='color:red'>🠋</span> Down"
@@ -264,11 +297,10 @@ df = df.to_html()
 st.header("Interactive LP Simulation")
 cols=st.columns([0.5, 0.5])
 with cols[0]:
+	fig = plotLP()
 	st.pyplot(fig)
 with cols[1]:
 	st.subheader('LP Solution')
 	st.write(df, unsafe_allow_html=True)
 	# st.markdown(f"- {dir_text(soln[0])} MV1 \n - {dir_text(soln[1])} MV2", unsafe_allow_html=True)
 	# st.markdown(f"Objective Function: {V:.1f}")
-
-
