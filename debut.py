@@ -19,10 +19,10 @@ with st.sidebar:
 		with cols[0]:
 			G11 = st.number_input('$G_{11}$: Reboiler TC-RVP', value=-0.200, step=0.01, format="%.3f")
 		with cols[1]:
-			G12 = st.number_input('$G_{12}$: Reboiler TC-C5', value=-0.072, step=0.01, format="%.3f")
+			G12 = st.number_input('$G_{12}$: Reflux FC-RVP', value=-0.072, step=0.01, format="%.3f")
 		cols=st.columns(2)
 		with cols[0]:
-			G21 = st.number_input('$G_{21}$: Reflux FC-RVP', value=0.125, step=0.01, format="%.3f")
+			G21 = st.number_input('$G_{21}$: Reboiler TC-C5', value=0.125, step=0.01, format="%.3f")
 		with cols[1]:
 			G22 = st.number_input('$G_{22}$: Reflux FC-C5', value=-0.954, step=0.01, format="%.3f")
 	st.subheader('Controlled Variables')
@@ -148,6 +148,65 @@ def plotLP(showVector=True, showOptimum=True):
 	# plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.02), ncol=5);
 	return fig
 
+# Conditioning plots
+G = np.array([[G11,G12], [G21,G22]])
+t = np.linspace(0,np.pi*2,200)
+X = np.array(list(zip(np.sin(t), np.cos(t))))
+Y = (G@X.T)
+u, s, Vt = np.linalg.svd(G, full_matrices=True)
+u_scaled = u @ np.diag(s)
+fig, (ax1,ax2) = plt.subplots(ncols=2, figsize=(10,5))
+
+ax1.plot(np.cos(t), np.sin(t), '-k', linewidth=1.5)
+ax1.plot(0,0,'ok')
+ax1.axvline(x=0, color='black', lw=0.5, linestyle='--')
+ax1.axhline(y=0, color='black', lw=0.5, linestyle='--')
+
+ax2.plot(Y[0,:],Y[1,:], '-k', linewidth=1.5)
+ax2.plot(0,0,'ok')
+ax2.axvline(x=0, color='black', lw=0.5, linestyle='--')
+ax2.axhline(y=0, color='black', lw=0.5, linestyle='--')
+
+ax1.annotate("", xy=Vt[0,:], xytext=(0, 0), arrowprops=dict(arrowstyle="->", color='r', lw=1.5))
+ax1.annotate("", xy=Vt[1,:], xytext=(0, 0), arrowprops=dict(arrowstyle="->", linestyle="--",  color='b', lw=1.5))
+ax2.annotate("", xy=u_scaled[:,0], xytext=(0, 0), arrowprops=dict(arrowstyle="->", color='r', lw=1.5))
+ax2.annotate("", xy=u_scaled[:,1], xytext=(0, 0), arrowprops=dict(arrowstyle="->", linestyle="--",  color='b', lw=1.5))
+
+ax2.annotate("", xy=(np.diag(s) @ u)[0], xytext=(0, 0), arrowprops=dict(arrowstyle="-", color='black', lw=1.0))
+
+labels = ['$A$', '$B$', '$C$', '$D$']
+points = [[0,1], [1,0], [0,-1], [-1,0]]
+
+for i, p1 in enumerate(points):
+    ax1.plot(p1[0], p1[1], color='k', marker='o', markersize=8, markerfacecolor='y', alpha=0.65)
+    ax2.plot((G@p1)[0], (G@p1)[1], color='k', marker='o', markersize=8, markerfacecolor='y', alpha=0.65)
+    
+    ax1.annotate(labels[i], # this is the text
+                 (p1[0],p1[1]), # these are the coordinates to position the label
+                 textcoords="offset points", # how to position the text
+                 xytext=(10,5), # distance from text to points (x,y)
+                 bbox=dict(boxstyle='round,pad=0.2', fc='yellow', alpha=0.3),
+                 ha='center')
+
+    ax2.annotate(labels[i], # this is the text
+                 ((G@p1)[0], (G@p1)[1]), # these are the coordinates to position the label
+                 textcoords="offset points", # how to position the text
+                 xytext=(10,10), # distance from text to points (x,y)
+                 bbox=dict(boxstyle='round,pad=0.2', fc='yellow', alpha=0.3),
+                 ha='center')    
+
+ax1.set_xlabel("$\Delta MV_1$")
+ax1.set_ylabel("$\Delta MV_2$")
+ax2.set_xlabel("$\Delta CV_1$")
+ax2.set_ylabel("$\Delta CV_2$")
+
+for ax in [ax1, ax2]:
+    ax.xaxis.set_major_formatter(StrMethodFormatter('{x:,.1f}'));
+    ax.yaxis.set_major_formatter(StrMethodFormatter('{x:,.1f}'));
+    ax.set_xlim([-1.2, 1.2])
+    ax.set_ylim([-1.2, 1.2])
+    ax.set_box_aspect(1);
+
 st.title('DMC LP Intro')
 
 with st.expander('Model', expanded=True):
@@ -181,7 +240,13 @@ with row1[0]:
 
 	st.info(f"The gain matrix tells us that: Every unit increase in reboiler temperature reduces RVP by {G11} units and increases C5 by {G21} units. This makes sense, if we fire the reboiler harder, we boil stuff up the top so the bottom RVP decreases (less volatile, more heavier components), and some of the heavier components go up the column, so overhead C5 increases. Every unit increase in reflux reduces RVP by {G12} units and reduces C5 by {G22} units. This also makes sense, because increasing reflux improves separation and washes down the heavier materials from the top. Separation is improved up to a certain point, considering flooding limits etc.")
 	st.subheader("Matrix Conditioning")
-	st.write("TBD")
+	st.markdown("The Singular Value Decomposition (SVD) operation allows us to break down the gain matrix $G$ into 3 matrices")
+	st.latex("G = U S V^T")
+	st.markdown("[Moore (1986)](https://ieeexplore.ieee.org/abstract/document/4789019) provides a really nice physical interpretation of these 3 matrices. The first column vector in the $U$ matrix tells the strongest direction of CV movements possible for this system, and the second column gives the second strongest direction, and so on. The $S$ singular values tell us the magnitude of these directions. The first row vector in the $V^T$ matrix tells us the MV movements required to achieve the strongest direction of CV movement, and the second row vector is the MV movements needed for the second strongest direction, and so on.")
+	st.markdown(f"A geometric interpretation of the SVD is shown below. The left subplot shows a unit circle of MV movements. The right subplot shows the impact of the corresponding MV movements on the CVs. For example, point A is a unit increase in Reflux FC with no change to Reboiler TC, which causes RVP to decrease by {G12} and C5 % to decrease by {G22}.")
+	st.markdown("The shape of the CV response ellipse tells us that there are strong and weak control directions. For this particular system, it is much more difficult to control the RVP compared to the C5. To get a 1 unit change in C5, we need about 10 times the magnitude of MV movement compared to making a 1 unit change in RVP.")
+	st.info("Use the controls on the left to change the gain matrix and see the impact on the CVs and the shape of the CV response ellipse.")
+	st.pyplot(fig)
 
 with row2[1]:
 	st.image('ranade.png', caption="Figure 2: The 3 main DMC modules. From Ranade, S. M., & Torres, E. (2009). From dynamic mysterious control to dynamic manageable control. Hydrocarbon Processing, 88(3), 77-81.")
