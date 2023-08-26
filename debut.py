@@ -172,8 +172,6 @@ ax1.annotate("", xy=Vt[1,:], xytext=(0, 0), arrowprops=dict(arrowstyle="->", lin
 ax2.annotate("", xy=u_scaled[:,0], xytext=(0, 0), arrowprops=dict(arrowstyle="->", color='r', lw=1.5))
 ax2.annotate("", xy=u_scaled[:,1], xytext=(0, 0), arrowprops=dict(arrowstyle="->", linestyle="--",  color='b', lw=1.5))
 
-ax2.annotate("", xy=(np.diag(s) @ u)[0], xytext=(0, 0), arrowprops=dict(arrowstyle="-", color='black', lw=1.0))
-
 labels = ['$A$', '$B$', '$C$', '$D$']
 points = [[0,1], [1,0], [0,-1], [-1,0]]
 
@@ -208,6 +206,8 @@ for ax in [ax1, ax2]:
     ax.set_box_aspect(1);
 
 st.title('DMC LP Intro')
+st.subheader('An interactive tutorial on interpreting the DMC linear program.')
+st.markdown('Last Updated: Siang Lim (August 2023). Source on [GitHub](https://github.com/csianglim/dmc-lp-streamlit).')
 
 with st.expander('Model', expanded=True):
 	row1=st.columns([0.55, 0.45])
@@ -246,7 +246,11 @@ with row1[0]:
 	st.markdown(f"A geometric interpretation of the SVD is shown below. The left subplot shows a unit circle of MV movements. The right subplot shows the impact of the corresponding MV movements on the CVs. For example, point A is a unit increase in Reflux FC with no change to Reboiler TC, which causes RVP to decrease by {G12} and C5 % to decrease by {G22}.")
 	st.markdown("The shape of the CV response ellipse tells us that there are strong and weak control directions. For this particular system, it is much more difficult to control the RVP compared to the C5. To get a 1 unit change in C5, we need about 10 times the magnitude of MV movement compared to making a 1 unit change in RVP.")
 	st.info("Use the controls on the left to change the gain matrix and see the impact on the CVs and the shape of the CV response ellipse.")
-	st.pyplot(fig)
+	# st.pyplot(fig)
+	try: # BUG: math error when user clicks too fast ValueError: $\Delta MV_1$
+		st.pyplot(fig)
+	except:
+		st.write("Plot error, please try again.")
 
 with row2[1]:
 	st.image('ranade.png', caption="Figure 2: The 3 main DMC modules. From Ranade, S. M., & Torres, E. (2009). From dynamic mysterious control to dynamic manageable control. Hydrocarbon Processing, 88(3), 77-81.")
