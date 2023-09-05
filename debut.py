@@ -485,6 +485,7 @@ with tab4:
 
         st.header("Optimization Case Studies")
         st.markdown("Here's a list of scenarios to explore using the LP simulator. Use the control panel on the left sidebar to adjust the costs and see how the optimization direction changes.")
+        st.info("For this debutanizer system, what are our desired optimization directions? If we want to reduce steam costs, would it make sense to assign a positive cost to Reboiler TC to reduce steam usage? What about reflux? Perhaps we want to maximize reflux to improve separation, so we should assign a negative cost to the Reflux FC? These are questions that should be considered during the design of the controller.")
         st.subheader("Case Study 1: Base Case (both negative)")
         st.markdown("""
             - Reboiler TC = -1
@@ -510,7 +511,7 @@ with tab4:
             - Is there only one unique set of LP costs which will drive the process to the desired targets?
             - Is setting the costs as simple as just getting the signs (+,-) on the costs right?
             """)
-        st.subheader("Case Study 5: Both Negative, different magnitudes")
+        st.subheader("Case Study 5: Both Negative (different magnitudes)")
         st.markdown("""
             - Reboiler TC = -1
             - Reflux FC = -0.1
