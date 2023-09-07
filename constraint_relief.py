@@ -13,8 +13,13 @@ CV3SSVal = 4.0
 MV1SSVal = 300
 MV2SSVal = 11.0
 
-if "CV3Limits" not in st.session_state:
+if "init" not in st.session_state:
+    st.session_state["init"] = True
+    st.session_state["CV1Limits"] = (8.0, 9.5)
+    st.session_state["CV2Limits"] = (1.0, 4.5)
     st.session_state["CV3Limits"] = (3.6, 4.4)
+    st.session_state["MV1Limits"] = (291.0, 309.0)
+    st.session_state["MV2Limits"] = (2.0, 20.0)
 
 CVStep = 0.05
 with st.sidebar:
@@ -46,15 +51,15 @@ with st.sidebar:
 
     st.subheader('Manipulated Variables')
     with st.columns(1)[0]:
-        MV1LoSS, MV1HiSS = st.slider(r'Reboiler TC Limits (°F)', 290.0, 310.0, (291.0, 309.0))
+        MV1LoSS, MV1HiSS = st.slider(r'Reboiler TC Limits (°F)', 290.0, 310.0, key="MV1Limits")
     with st.columns(1)[0]:
-        MV2LoSS, MV2HiSS = st.slider(r'Reflux FC Limits (MBPD)', 1.0, 21.0, (2.0, 20.0))        
+        MV2LoSS, MV2HiSS = st.slider(r'Reflux FC Limits (MBPD)', 1.0, 21.0, key="MV2Limits")
     
     st.subheader('Controlled Variables')
     with st.columns(1)[0]:
-        CV1LoSS, CV1HiSS = st.slider(r'RVP Limits (psi)', 7.5, 10.0, (8.0, 9.5), step=CVStep)
+        st.slider(r'RVP Limits (psi)', 7.5, 10.0, step=CVStep, key="CV1Limits")
     with st.columns(1)[0]:
-        CV2LoSS, CV2HiSS = st.slider(r'C5 Limits (%)', 0.5, 5.0, (1.0, 4.5), step=CVStep)
+        st.slider(r'C5 Limits (%)', 0.5, 5.0, step=CVStep, key="CV2Limits")
     with st.columns(1)[0]:
         st.slider(r'dP Limits (psig)', 3.5, 4.5, step=0.01, key="CV3Limits")
 
@@ -68,7 +73,12 @@ G21 = st.session_state["G21"]
 G22 = st.session_state["G22"]
 G31 = st.session_state["G31"]
 G32 = st.session_state["G32"]
+
+CV1LoSS, CV1HiSS = st.session_state["CV1Limits"]
+CV2LoSS, CV2HiSS = st.session_state["CV2Limits"]
 CV3LoSS, CV3HiSS = st.session_state["CV3Limits"]
+MV1LoSS, MV1HiSS = st.session_state["MV1Limits"]
+MV2LoSS, MV2HiSS = st.session_state["MV2Limits"]
 
 limits = 10
 d = np.linspace(-limits, limits, 100)
