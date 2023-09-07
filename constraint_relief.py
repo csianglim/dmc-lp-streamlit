@@ -7,6 +7,7 @@ from matplotlib.ticker import StrMethodFormatter
 from pulp import LpVariable, LpProblem, LpMinimize, value, PULP_CBC_CMD
 st.set_page_config(layout="wide")
 
+# steady-state vals
 CV1SSVal = 9.0
 CV2SSVal = 2.5
 CV3SSVal = 4.0
@@ -20,6 +21,8 @@ if "init" not in st.session_state:
     st.session_state["CV3Limits"] = (3.6, 4.4)
     st.session_state["MV1Limits"] = (291.0, 309.0)
     st.session_state["MV2Limits"] = (2.0, 20.0)
+    st.session_state["MV1Cost"] = -1.0
+    st.session_state["MV2Cost"] = -1.0
 
 CVStep = 0.05
 with st.sidebar:
@@ -44,16 +47,16 @@ with st.sidebar:
     with st.expander('LP Costs'):
         cols=st.columns(2)
         with cols[0]:
-            MV1Cost = st.number_input(r'Reboiler TC Cost', value=-1.0, step=0.1)
+            st.number_input(r'Reboiler TC Cost', step=0.1, key="MV1Cost")
         with cols[1]:
-            MV2Cost = st.number_input(r'Reflux FC Cost', value=-1.0, step=0.1)  
+            st.number_input(r'Reflux FC Cost', step=0.1, key="MV2Cost")
 
 
     st.subheader('Manipulated Variables')
     with st.columns(1)[0]:
-        MV1LoSS, MV1HiSS = st.slider(r'Reboiler TC Limits (°F)', 290.0, 310.0, key="MV1Limits")
+        st.slider(r'Reboiler TC Limits (°F)', 290.0, 310.0, key="MV1Limits")
     with st.columns(1)[0]:
-        MV2LoSS, MV2HiSS = st.slider(r'Reflux FC Limits (MBPD)', 1.0, 21.0, key="MV2Limits")
+        st.slider(r'Reflux FC Limits (MBPD)', 1.0, 21.0, key="MV2Limits")
     
     st.subheader('Controlled Variables')
     with st.columns(1)[0]:
@@ -79,6 +82,9 @@ CV2LoSS, CV2HiSS = st.session_state["CV2Limits"]
 CV3LoSS, CV3HiSS = st.session_state["CV3Limits"]
 MV1LoSS, MV1HiSS = st.session_state["MV1Limits"]
 MV2LoSS, MV2HiSS = st.session_state["MV2Limits"]
+
+MV1Cost = st.session_state["MV1Cost"]
+MV2Cost = st.session_state["MV2Cost"]
 
 limits = 10
 d = np.linspace(-limits, limits, 100)
@@ -271,7 +277,7 @@ st.title('Multivariable Controllers - LP-DMC (Part 2: Constraint Relief)')
 st.subheader('Interpreting multivariable controller actions: an interactive tutorial.')
 
 
-tab1, tab4 = st.tabs(["🎓 Introduction", "📈 Simulation"]) #, "🕵 Scenarios"])
+tab1, tab2, tab3 = st.tabs(["🎓 Introduction", "📈 Simulation", "🕵 Shadow Prices"]) #, "🕵 Scenarios"])
 
 with tab1: #st.expander('DMC', expanded=True):
     row1=st.columns([0.55, 0.45])
@@ -400,7 +406,7 @@ def clamp_dp():
 def unclamp_dp():
     st.session_state["CV3Limits"] = (3.6, 4.4)    
 
-with tab4:
+with tab2:
     st.header("Interactive LP Simulation")
     st.markdown("In this module, you can adjust the operating limits, gain matrix and LP costs to study the response of the LP solution. We will explore the effects of **'clamping'** the limits of the dP and how it impacts the LP solution and optimization directions. Initially, the dP limits are wide open, and does not impact the optimum point or the feasible region.")
     st.info("**Case Study**: What happens when you reduce the dP upper limit? Reducing the upper limit simulates a possible operational scenario where the tower is flooded or overloaded.")
@@ -434,3 +440,44 @@ with tab4:
             - The C5 and RVP are no longer controlling to the upper limit.
             - The controller reduces reflux to offload the column. 
             """)
+
+def change_ref_lp():
+    st.session_state["MV2Cost"] = -0.1
+
+def reverse_ref_lp():
+    st.session_state["MV2Cost"] = -1.0    
+
+with tab3:
+    cols=st.columns([0.5, 0.5])
+    with cols[0]:
+        st.header("Shadow Prices")
+        st.markdown(r"In Linear Programming theory, the shadow price of a constraint is defined as the change in objective function for each engineering unit of moving a limit.")
+        st.latex(r"\text{Shadow Price} = \Delta\text{Obj}/\Delta\text{Limit}")
+        st.markdown("By definition, the shadow price of a **non-binding** constraint, which is a variable not at its limit, is equal to 0.")
+
+        st.header("Case Study 2: Shadow Price Calculation")
+        st.markdown("Consider the default simulation limits, but now with a new LP cost of -0.1 for the Reflux FC. How does that impact the LP solution? Did the constraints change? What are the new binding constraints (i.e. variables at their limits), and what is the shadow price of this new variable? Use the diagram and tables on the right as a reference.")
+        innercols=st.columns([0.5, 0.5])
+        with innercols[0]:
+            st.button('Set Reflux LP Cost to -0.1', on_click=change_ref_lp, use_container_width=True)
+        with innercols[1]:
+            st.button('Reset Reflux LP Cost to -1.0', on_click=reverse_ref_lp, use_container_width=True)      
+        st.subheader("Discussion")
+        st.markdown("Since we know the LP costs, we can actually calculate the shadow price by hand, using the change in coordinates of the LP solution.")
+        st.latex(r"\text{Shadow Price} = \Delta\text{Obj}/\Delta\text{Limit}")       
+
+    with cols[1]:
+        innercols=st.columns([0.5, 0.5])
+        # with innercols[0]:
+        fig = plotLP()
+        st.pyplot(fig)
+        st.write(df, unsafe_allow_html=True)
+        st.markdown("#### Optimization Directions")
+        st.markdown(f"""
+            - **Reboiler TC:** {dir_text(soln[0])} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; **Reflux FC:** {dir_text(soln[1])}
+            - Value of Objective Function (Profit): ${-(V):.2f}
+            - Coodinates of Optimum Point: ({soln[0]:.3f}, {soln[1]:.3f})
+        """, unsafe_allow_html=True)        
+        st.text("\n")
+        st.markdown("Shadow Prices")
+        st.dataframe(pd.DataFrame(o).T)         
