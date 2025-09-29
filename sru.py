@@ -15,7 +15,7 @@ from matplotlib.colors import TwoSlopeNorm, Normalize
 st.set_page_config(layout="wide")
 
 # variable names and engineering units
-varMV1 = {'Name': 'O2', 'UOM': '%', 'Cost': 10, 'SSVal':30.0, 'Limits': (21, 37), 'EngLimits': (21.0, 70.0), 'TYPMOV': 0.1}
+varMV1 = {'Name': 'O2', 'UOM': '%', 'Cost': 10, 'SSVal':30.0, 'Limits': (21, 37), 'EngLimits': (21.0, 60.0), 'TYPMOV': 0.1}
 varMV2 = {'Name': 'FG', 'UOM': 'SCFH', 'Cost': 0.1, 'SSVal':900.0, 'Limits': (400, 1000), 'EngLimits': (290, 1500), 'TYPMOV': 10}
 
 varCV1 = {'Name': 'P', 'UOM': 'psi', 'SSVal':8.6, 'Limits': (7.0, 9.0), 'EngLimits': (6.0, 10.0), 'TYPMOV': 0.1}
@@ -319,7 +319,12 @@ dvecy = np.linspace(-ylimits, ylimits, 50)
 xv, yv = np.meshgrid(dvecx, dvecy)
 
 def dir_text(soln):
-    return "<span style='color:blue'>⬆</span> Up" if soln > 0 else "<span style='color:red'>⬇</span> Down"
+    if soln > 0:
+        return "<span style='color:blue'>⬆</span> Up"
+    elif soln < 0:
+        return "<span style='color:red'>⬇</span> Down"
+    else:
+        return "<span style='color:black'>-</span>"
 
 def dollar_formatter(x, pos):
     if x < 0:
@@ -330,21 +335,25 @@ def dollar_formatter(x, pos):
 o = {}
 # st.text(prob.constraints.items())
 for name, c in prob.constraints.items():
+    print(name, c.pi, MV1.dj, MV2.dj)
     o[name] = {'shadow price':c.pi, 'slack': abs(c.slack)}
     # st.write(name, c.slack)
 # st.text(o)
 
 constrained = {}
 for var in ['MV1', 'MV2', 'CV1', 'CV2', 'CV3']:
-    loslack = o[var+'_Low_Limit']['slack']
-    hislack = o[var+'_High_Limit']['slack']
-    
-    if np.isclose(abs(loslack), 0, rtol=1e-20):
-        constrained[var] = "Lo Limit"
-    elif np.isclose(abs(hislack), 0, rtol=1e-20):
-        constrained[var] = "Hi Limit"
+    if 'FF' in var:
+        constrained[var] = '-'
     else:
-        constrained[var] = "Normal"
+        loslack = o[var+'_Low_Limit']['slack']
+        hislack = o[var+'_High_Limit']['slack']
+        
+        if np.isclose(abs(loslack), 0, rtol=1e-20):
+            constrained[var] = "Lo Limit"
+        elif np.isclose(abs(hislack), 0, rtol=1e-20):
+            constrained[var] = "Hi Limit"
+        else:
+            constrained[var] = "Normal"
 
 def color_constraint(val):
     color = 'lightblue' if 'Limit' in val else ''
@@ -395,12 +404,24 @@ df.loc['CV1', 'Delta'] = G11*soln[0]+G12*soln[1]
 df.loc['CV2', 'Delta'] = G21*soln[0]+G22*soln[1]
 df.loc['CV3', 'Delta'] = G31*soln[0]+G32*soln[1]
 
+df_ff = pd.DataFrame.from_dict({
+    "FF1": {
+        "PV": st.session_state['FF1SSVal'], "Move": dir_text(FF1PV), "Delta": FF1PV, 
+    },
+    "FF2": {
+        "PV": st.session_state['FF2SSVal'], "Move": dir_text(FF2PV), "Delta": FF2PV,
+    },
+    "FF3": {
+        "PV": st.session_state['FF3SSVal'], "Move": dir_text(FF3PV), "Delta": FF3PV,
+    },
+}, orient="index")
+
 df.rename(index={
     'MV1': f"MV - {varMV1['Name']} ({varMV1['UOM']})", 
     'MV2': f"MV - {varMV2['Name']} ({varMV2['UOM']})", 
     'CV1': f"CV - {varCV1['Name']} ({varCV1['UOM']})", 
     'CV2': f"CV - {varCV2['Name']} ({varCV2['UOM']})", 
-    'CV3': f"CV - {varCV3['Name']} ({varCV3['UOM']})"}, 
+    'CV3': f"CV - {varCV3['Name']} ({varCV3['UOM']})"},
     inplace=True)
 
 df = df.style.apply(highlight_lo, axis=None, subset=['Status', 'LoLim'])\
@@ -408,6 +429,17 @@ df = df.style.apply(highlight_lo, axis=None, subset=['Status', 'LoLim'])\
              .map(color_constraint, subset=['Status'])\
              .format(dict.fromkeys(df.select_dtypes('float').columns, "{:.2f}"))\
              .to_html()
+
+
+df_ff.rename(index={
+    'FF1': f"FF - {varFF1['Name']} ({varFF1['UOM']})",
+    'FF2': f"FF - {varFF2['Name']} ({varFF2['UOM']})", 
+    'FF3': f"FF - {varFF3['Name']} ({varFF3['UOM']})"},
+    inplace=True)
+
+df_ff = df_ff.style.format(dict.fromkeys(df_ff.select_dtypes('float').columns, "{:.2f}"))\
+             .to_html()
+
 
 def plotLP(showVector=True, showOptimum=True):
     fig, ax = plt.subplots(figsize=(5,5))
@@ -461,7 +493,8 @@ def plotLP(showVector=True, showOptimum=True):
 
             # center the cmap around $0
             vmin = np.min(z_obj)
-            vmax = np.max([50, np.max(z_obj)]) # set to 50 for reasonable high range on cmap when z_obj val is low
+            V_lim = 60
+            vmax = np.max([V_lim, np.max(z_obj)]) # set to 60 ish for reasonable high range on cmap when z_obj val is low
             if vmin < 0 and vmax > 0:
                 # Data spans negative and positive → center at 0
                 norm = TwoSlopeNorm(vmin=vmin, vcenter=0, vmax=vmax)
@@ -475,10 +508,21 @@ def plotLP(showVector=True, showOptimum=True):
 
             # Create a new axes below the main plot
             cbar_ax = fig.add_axes([pos.x0, pos.y0 - 0.13, pos.width, 0.03])  # 0.05 below 
-            cbar = fig.colorbar(q, cax=cbar_ax, orientation='horizontal', label="Profit ($) for this move")
+            cbar = fig.colorbar(q, cax=cbar_ax, orientation='horizontal', label=fr"Profit for this move: {dollar_formatter(-V,2)}")
+            # Draw a line on the colorbar
+            # cbar.ax.axvline(np.max([-V,V_lim]), color="darkblue", linewidth=1)
+            # cbar.ax.annotate(
+            #     "", 
+            #     xy=(np.max([-V,V_lim]), 0),          # arrow tip (on colorbar axis)
+            #     xytext=(np.max([-V,V_lim]), -0.2),   # arrow tail (below bar)
+            #     xycoords=("data", "axes fraction"),
+            #     textcoords=("data", "axes fraction"),
+            #     arrowprops=dict(arrowstyle="-|>", color="darkblue", lw=1.5),
+            # )
             if vmin < 0 and vmax > 0:
                 cbar.set_ticks([vmin, vmin*3/4, vmin/2, vmin/4, 0, vmax/4, vmax/2, vmax*3/4, vmax])
             cbar_ax.xaxis.set_major_formatter(dollar_formatter)
+            cbar_ax.tick_params(axis="x", labelsize=9)
 
     # must be on top layer
     feasible_mask = (c1 & c2 & c3 & c4 & c5 & c6 & m1 & m2).astype(int)
@@ -509,7 +553,8 @@ def plotLP(showVector=True, showOptimum=True):
     # plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.02), ncol=5)
     return fig
 
-tab1, tab2 = st.tabs(["📈 Simulation", "🕵 Gain Matrix"]) #, "🕵 Shadow Prices"]) #, "🕵 Scenarios"])
+tab1, tab2 = st.tabs(["📈 Simulation", "🕵 Theory"]) #, "🕵 Shadow Prices"]) #, "🕵 Scenarios"])
+fig = plotLP()
 
 with tab2:
     # For SVD plot
@@ -517,42 +562,129 @@ with tab2:
     # t = np.linspace(0,np.pi*2,200)
     # u, s, Vt = np.linalg.svd(G, full_matrices=True)
 
-    cols=st.columns([0.5, 0.5])
+    cols=st.columns([0.55, 0.45])
     with cols[0]:
         st.subheader("Gain Matrix")
-        st.markdown(r"The $3\times2$ gain matrix, $G$ with 2 MVs and 3 CVs, has 6 elements, where each element $G_{ij}$ describes the *steady-state* relationship between $\text{CV}_{i}$ and $\text{MV}_{j}$.")   
-        G11 = st.session_state["G11"]
-        G12 = st.session_state["G12"]
-        G21 = st.session_state["G21"]
-        G22 = st.session_state["G22"]
-        G31 = st.session_state["G31"]
-        G32 = st.session_state["G32"]
+        st.markdown(r"The $3\times2$ gain matrix, $G$ with 2 MVs and 3 CVs, has 6 elements, where each element $G_{ij}$ describes the *steady-state* relationship between $\text{CV}_{i}$ and $\text{MV}_{j}$.")
+        # G11 = st.session_state["G11"]
+        # G12 = st.session_state["G12"]
+        # G21 = st.session_state["G21"]
+        # G22 = st.session_state["G22"]
+        # G31 = st.session_state["G31"]
+        # G32 = st.session_state["G32"]
 
-        varvals = {f"{varMV1['Name']}": [G11, G21, G31], f"{varMV2['Name']}": [G12, G22, G32]}
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            st.dataframe(pd.DataFrame(varvals, index=[f"{varCV1['Name']}", f"{varCV2['Name']}", f"{varCV3['Name']}"]).style.format("{:.3f}"))
+        varvals = {
+            f"{varMV1['Name']}": [G11, G21, G31], 
+            f"{varMV2['Name']}": [G12, G22, G32],
+            f"FF - AC155": [G13, G23, G33],
+            f"FF - AAG": [G14, G24, G34],
+            f"FF - SWAG": [G15, G25, G35],
+        }
+        
 
-        st.markdown("The equation relating the CVs and MVs through the gain matrix is given by:")
-        st.latex(r"\Delta CV = G \cdot \Delta MV")  
-        st.latex(rf"G = \begin{{bmatrix}} \
-                G_{{11}} & G_{{12}} \\ \
-                G_{{21}} & G_{{22}} \\ \
-                G_{{31}} & G_{{32}} \
+        def highlight_blue(val):
+            return "color: darkblue"
+
+        gainmatrix_df = pd.DataFrame(varvals, index=[f"{varCV1['Name']}", f"{varCV2['Name']}", f"{varCV3['Name']}"])
+        st.dataframe(gainmatrix_df.style.applymap(highlight_blue, subset=gainmatrix_df.columns[-3:]).format("{:.5f}"))
+        st.info(r"An additional 3 Feedforward (FF) variables are disturbances that cannot be controlled by DMC for an overall gain matrix size of $3\times5$ including the FFs.")   
+
+        st.markdown("The equation relating the change in CVs, $\Delta CV$ to changes in independent variables MVs and FFs, through the gain matrix is given by:")
+        st.latex(rf"\Delta CV = {{G_{{MV}} \cdot \Delta MV}} + \color{{darkblue}}{{G_{{FF}} \cdot \Delta FF}}")  
+        st.latex(rf"G_{{MV}} = \begin{{bmatrix}} \
+                g_{{11}} & g_{{12}}\\ \
+                g_{{21}} & g_{{22}}\\ \
+                g_{{31}} & g_{{32}}\
             \end{{bmatrix}} = \begin{{bmatrix}} \
-                {G11:.3f} & {G12:.3f} \\ \
-                {G21:.3f} & {G22:.3f} \\ \
-                {G31:.3f} & {G32:.3f} \
+                {G11:.3f} & {G12:.3f}\\ \
+                {G21:.3f} & {G22:.3f}\\ \
+                {G31:.3f} & {G32:.3f}\
             \end{{bmatrix}}")
-        st.markdown("Using the gain matrix, the CV relationships can be written in terms of its MVs:")
+        st.latex(rf"\color{{darkblue}}{{G_{{FF}} = \begin{{bmatrix}} \
+                g_{{13}} & g_{{14}} & g_{{15}} \\ \
+                g_{{23}} & g_{{24}} & g_{{25}} \\ \
+                g_{{33}} & g_{{34}} & g_{{35}} \
+            \end{{bmatrix}} = \begin{{bmatrix}} \
+                {G13:.3f} & {G14:.3f} & {G15:.3f}\\ \
+                {G23:.3f} & {G24:.3f} & {G25:.3f}\\ \
+                {G33:.3f} & {G34:.3f} & {G35:.3f}\
+            \end{{bmatrix}}}}")
+    cols=st.columns([0.75, 0.25])
+    with cols[0]:  
+        st.markdown("Using the gain matrix, the CV relationships can be written in terms of its independent variables:")
         st.latex(rf"""
             \begin{{align}}
-                \Delta \text{{{varCV1['Name']}}} &= {G11:.3f} \cdot \Delta \text{{{varMV1['Name']}}} + {G12:.3f} \cdot \Delta \text{{{varMV2['Name']}}}\\ 
-                \Delta \text{{{varCV2['Name']}}} &= {G21:.3f} \cdot \Delta \text{{{varMV1['Name']}}} + {G22:.3f} \cdot \Delta \text{{{varMV2['Name']}}}\\
-                \Delta \text{{{varCV3['Name']}}} &= {G31:.3f} \cdot \Delta \text{{{varMV1['Name']}}} + {G32:.3f} \cdot \Delta \text{{{varMV2['Name']}}}            
+                \Delta \text{{{varCV1['Name']}}} &= {G11:.3f} \cdot \Delta \text{{{varMV1['Name']}}} + {G12:.3f} \cdot \Delta \text{{{varMV2['Name']}}} + \color{{darkblue}}{{{G13:.3f} \cdot \Delta \text{{AC155.CO}} + {G14:.3f} \cdot \Delta \text{{AAG}} + {G15:.3f} \cdot \Delta \text{{SWAG}}}}\\ 
+                \Delta \text{{{varCV2['Name']}}} &= {G21:.3f} \cdot \Delta \text{{{varMV1['Name']}}} + {G22:.3f} \cdot \Delta \text{{{varMV2['Name']}}} + \color{{darkblue}}{{{G23:.3f} \cdot \Delta \text{{AC155.CO}} + {G24:.3f} \cdot \Delta \text{{AAG}} + {G25:.3f} \cdot \Delta \text{{SWAG}}}}\\
+                \Delta \text{{{varCV3['Name']}}} &= {G31:.3f} \cdot \Delta \text{{{varMV1['Name']}}} + {G32:.3f} \cdot \Delta \text{{{varMV2['Name']}}} + \color{{darkblue}}{{{G33:.3f} \cdot \Delta \text{{AC155.CO}} + {G34:.3f} \cdot \Delta \text{{AAG}} + {G35:.3f} \cdot \Delta \text{{SWAG}}}}
             \end{{align}}
             """)
+    cols=st.columns([0.55, 0.45])
+    with cols[0]:
+        st.header('Linear Program')
+        st.markdown('The LP steady-state (SS) optimizer is responsible for generating SS targets for the move calculations.')
+        st.markdown("We can impose upper and lower limits on the MVs. These are *hard constraints* that cannot be violated.")
+        st.latex(r"\text{MV}_{1, \text{LL}} \leq \text{MV}_{1} \leq \text{MV}_{1, \text{UL}}\\\text{MV}_{2, \text{LL}} \leq \text{MV}_{2} \leq \text{MV}_{2, \text{UL}}\\")
+        st.info("MV limits are **hard constraints** which will not be violated.")
+        st.markdown("We can also impose upper and lower limits on the CVs. These are *soft constraints* that can be relaxed if the LP problem is infeasible.")
+        st.latex(r"\text{CV}_{1, \text{LL}} \leq \text{CV}_{1} \leq \text{CV}_{1, \text{UL}}\\\text{CV}_{2, \text{LL}} \leq \text{CV}_{2} \leq \text{CV}_{2, \text{UL}}\\\text{CV}_{3, \text{LL}} \leq \text{CV}_{3} \leq \text{CV}_{3, \text{UL}}")
+        st.info("CV limits are **soft constraints** that can be violated if the LP problem is infeasible. A DMC tuning parameter called the **CV Rank** is used to determine the priority of CVs, with 1 being the most important and 999 being the least important.")
+        st.warning("This ranked CV give-up routine is not programmed in this simple LP simulator. The app will just show that the problem is infeasible.")
+        st.markdown("We solve the LP in terms of $\Delta$ Delta Moves, based on **current conditions** and relative distance from constraints. To transform the solution space in terms of relative moves $\Delta MV$ and $\Delta CV$, we just subtract the current PV from the inequality:")
+        st.latex(r"\text{MV}_{1, \text{LL}} - \text{MV}_{1, \text{PV}} \leq \text{MV}_{1} - \text{MV}_{1, \text{PV}} \leq \text{MV}_{1, \text{UL}} - \text{MV}_{1, \text{PV}}\\\text{MV}_{2, \text{LL}} - \text{MV}_{2, \text{PV}} \leq \text{MV}_{2} - \text{MV}_{2, \text{PV}} \leq \text{MV}_{2, \text{UL}} - \text{MV}_{2, \text{PV}}\\")
+        st.markdown("The steady-state value of CVs are affected by changes in the FFs, which cannot be controlled by DMC. We subtract a disturbance term to account for the changes in FF values and its predicted impact on the CVs based on the gain matrix.")
+        st.info("For example, the impact of FF changes on CV1 is given by a disturbance term $D_1 = G_{13} \cdot \Delta FF_1 + G_{14} \cdot \Delta FF_2 + G_{15} \cdot \Delta FF_3$. The overall change on CV1 is given by adding the predicted steady-state changes from MV movements, $\Delta CV$ to the predicted steady-state changes from FF movements, $D$. For example, $\\text{CV}_1 = \\text{CV}_{1, \\text{PV}} + \Delta \\text{CV}_1 + D_1$")
+        st.latex(r"\text{CV}_{1, \text{LL}} - \text{CV}_{1, \text{PV}} - D_1 \leq \text{CV}_{1} - \text{CV}_{1, \text{PV}} - D_1 \leq \text{CV}_{1, \text{UL}} - \text{CV}_{1, \text{PV}} - D_1 \\\text{CV}_{2, \text{LL}} - \text{CV}_{2, \text{PV}} - D_2 \leq \text{CV}_{2} - \text{CV}_{2, \text{PV}} - D_2 \leq \text{CV}_{2, \text{UL}} - \text{CV}_{2, \text{PV}} - D_2 \\\text{CV}_{3, \text{LL}} - \text{CV}_{3, \text{PV}} - D_3 \leq \text{CV}_{3} - \text{CV}_{3, \text{PV}} - D_3 \leq \text{CV}_{3, \text{UL}} - \text{CV}_{3, \text{PV}} - D_3")
+        st.markdown("Which gives us the transformed inequalities in terms of how much movement the LP has available based on current PV and its relative distance to the limits:")
+        st.latex(r"\Delta\text{MV}_{1, \text{LL}} \leq \Delta \text{MV}_{1} \leq \Delta \text{MV}_{1, \text{UL}}\\\Delta\text{MV}_{2, \text{LL}} \leq \Delta \text{MV}_{2} \leq \Delta \text{MV}_{2, \text{UL}}\\")
+        st.latex(r"\Delta\text{CV}_{1, \text{LL}} \leq \Delta \text{CV}_{1} \leq \Delta \text{CV}_{1, \text{UL}}\\\Delta\text{CV}_{2, \text{LL}} \leq \Delta \text{CV}_{2} \leq \Delta \text{CV}_{2, \text{UL}}\\\Delta\text{CV}_{3, \text{LL}} \leq \Delta \text{CV}_{3} \leq \Delta \text{CV}_{3, \text{UL}}")
 
+        st.markdown("Since the CVs are related to the MVs by the gain matrix, we can substitute the equations to get CV limits in terms of MV movements:")
+        st.latex(r"G_{11} \Delta \text{MV}_{1} + G_{12} \Delta \text{MV}_{2} \leq \Delta \text{CV}_{1, \text{UL}}\\G_{11} \Delta \text{MV}_{1} + G_{12} \Delta \text{MV}_{2} \geq \Delta \text{CV}_{1, \text{LL}}\\G_{21} \Delta \text{MV}_{1} + G_{22} \Delta \text{MV}_{2} \leq \Delta \text{CV}_{2, \text{UL}} \\G_{21} \Delta \text{MV}_{1} + G_{22} \Delta \text{MV}_{2} \geq \Delta \text{CV}_{2, \text{LL}} \\")
+
+    cols=st.columns([0.55, 0.45])
+    with cols[0]:
+        st.header("Feasible Region")
+        st.markdown("We can plot the MV and CV limits as a function of MV movements. The limits are linear, so each limit forms a straight line. Since the limits are inequalities, the limit is actually a half-plane, where all points on one side satisfy the inequality. If we take the intersection of all the half-planes, we get a shaded area as shown in the figure on the right. The shaded area is known as the `feasible region` or `solution space` in the LP problem. It is defined based on the current process conditions and the distance of each variable from its constraints.")
+
+        st.subheader("LP Objective Function")
+        st.markdown("The feasible region tells us that the LP optimizer is allowed to move $\Delta MV_1$ and $\Delta MV_2$ within the shaded region to honour the CV limits. The question now is, out of all the possible points in the feasible region, which one should the optimizer pick and why?")
+        st.markdown("From Linear Programming theory, we know that, solutions only exist at the 'corners' of the solution space. These solutions are defined by the objective function. The objective function in DMC is defined as a cost minimization function based on MV movements. The equations below are a simplified version of the actual objective function (see *Sorensen, R. C., & Cutler, C. R. (1998)* for details).")
+        st.markdown("We want to assign an 'LP cost' to each MV, based on the economics and desired directionality of MV movement. The LP costs set the **preferred** direction of optimization. For 2 MVs, we get:")
+        st.latex(r"\min_{\Delta MV_1, \Delta MV_2} f(\Delta MV_1, \Delta MV_2) = c_1 \Delta MV_1 + c_2 \Delta MV_2")
+    
+        st.subheader("LP Costs")
+        st.markdown("As a rule of thumb, a negative LP cost would incentivize the DMC LP to _maximize_ that variable (**preferred, but not guaranteed!**), and likewise, a positive cost would incentivize the DMC LP to _minimize_ that variable. However, there are exceptions as we will see later on.")        
+        st.markdown("The DMC controller is designed with a set of LP costs that will drive the process to the desired constraint set under normal operation *('ideal constraints')*.")
+        st.info("Is there only one unique set of LP costs that will drive the process to the desired targets? Is setting the costs as simple as just getting the signs right?")
+    with cols[1]:
+        st.pyplot(fig)
+
+    cols=st.columns([0.55, 0.45])
+    with cols[0]:
+        st.header("Shadow Prices")
+        st.markdown(r"In Linear Programming theory, the shadow price of a constraint is defined as the change in objective function for each engineering unit of moving a limit.")
+        st.latex(r"\text{Shadow Price} = \Delta\text{Obj}/\Delta\text{Limit}")
+        st.markdown("By definition, the shadow price of a **non-binding** constraint, which is a variable not at its limit, is equal to 0.")
+
+        st.header("Case Study")
+        st.warning("Reset the simulation to get the default limits and adjust the LP costs. How does that impact the LP solution? Did the constraints change? What are the new binding constraints (i.e. variables at their limits), and what is the shadow price of this new variable? How sensitive is the solution?")
+        # innercols=st.columns([0.5, 0.5])
+        # with innercols[0]:
+        #     st.button('Set Reflux LP Cost to -0.1', on_click=change_ref_lp, use_container_width=True)
+        # with innercols[1]:
+        #     st.button('Reset Reflux LP Cost to -1.0', on_click=reverse_ref_lp, use_container_width=True)      
+        # st.markdown("Since we know the LP costs, we can actually calculate the shadow price by hand, using the change in coordinates of the LP solution.")
+        # st.latex(r"\text{Shadow Price} = \Delta\text{Obj}/\Delta\text{Limit}")       
+        # with innercols[0]:
+
+        st.markdown(f"""
+            - Value of Objective Function (Profit): ${-(V):.2f}
+            - Coodinates of Optimum Point: ({soln[0]:.3f}, {soln[1]:.3f})
+        """, unsafe_allow_html=True)
+        st.text("\n")
+        st.markdown("Shadow Prices")
+        st.dataframe(pd.DataFrame(o).T)
 
     # cols=st.columns([0.65, 0.35])
     # with cols[0]:
@@ -612,41 +744,12 @@ with tab1:
     cols=st.columns([0.55, 0.45])
     with cols[1]:
         # runLP()
-        fig = plotLP()
         st.pyplot(fig)
 
-        if st.session_state["shade_MV1"] or st.session_state["shade_MV2"]:
-            st.info("MV limits are *hard constraints* that cannot be violated.")
-
-        if st.session_state["shade_CV1"] or st.session_state["shade_CV2"] or st.session_state["shade_CV3"]:
-            st.info("CV limits are *soft constraints* that can be **given up** if the LP problem is infeasible.")
-
-        if st.session_state["shade_feasible"]:
-            st.info("""
-                #### Feasible Region
-                Each MV/CV high limit and low limit can be plotted as a shaded region between 2 straight lines.\
-                If we take the intersection of all shaded regions formed by each constraint,\
-                we get the feasible region or solution space.\
-                The feasible region tells us that DMC is allowed to make MV moves on $\Delta MV_1$ and $\Delta MV_2$ within that space without violating any limits.                
-            """)
-
-    with cols[0]:
-        if LpStatus[status] != "Optimal":
-            st.error(f"⚠ Status: {LpStatus[status]}. No feasible LP solution found.")
-        else:        
-            st.badge("LP Solution Table")
-            # st.markdown("**LP Solution Table**")
-            st.write(df, unsafe_allow_html=True)
-            # st.markdown(f"""
-            #     - DMC LP will move MV1 **$\Delta${varMV1['Name']}:** {dir_text(soln[0])} by {soln[0]:.1f}{varMV1['UOM']}
-            #     - DMC LP will move MV2 **$\Delta${varMV2['Name']}:** {dir_text(soln[1])} by {soln[1]:.0f} {varMV2['UOM']}
-            # """, unsafe_allow_html=True)
-
-        # st.divider()
         st.html("<hr><b>LP Visualization Details</b><hr>")
         col1, col2, col3, col4 = st.columns(4)
         with col1:
-            shade_feasible = st.checkbox(f"Feasible Region", key='shade_feasible')
+            shade_feasible = st.checkbox(f"Shade Feasible", key='shade_feasible')
         with col2:
             show_optimum = st.checkbox(f"Optimum Point", key='show_optimum')
         with col3:
@@ -666,6 +769,28 @@ with tab1:
         with col5:          
             shade_CV3 = st.checkbox(f"CV3: {varCV3['Name']}", key='shade_CV3')
 
+        if st.session_state["shade_MV1"] or st.session_state["shade_MV2"]:
+            st.info("MV limits are *hard constraints* that cannot be violated.")
+
+        if st.session_state["shade_CV1"] or st.session_state["shade_CV2"] or st.session_state["shade_CV3"]:
+            st.info("CV limits are *soft constraints* that can be **given up** if the LP problem is infeasible.")
+
+    with cols[0]:
+        if LpStatus[status] != "Optimal":
+            st.error(f"⚠ Status: {LpStatus[status]}. No feasible LP solution found.")
+        else:        
+            st.badge("LP Solution Table")
+            # st.markdown("**LP Solution Table**")
+            st.write(df, unsafe_allow_html=True)
+            st.badge("Feedforward Variables")
+            st.write(df_ff, unsafe_allow_html=True)
+            # st.dataframe(df_ff)
+            # st.markdown(f"""
+            #     - DMC LP will move MV1 **$\Delta${varMV1['Name']}:** {dir_text(soln[0])} by {soln[0]:.1f}{varMV1['UOM']}
+            #     - DMC LP will move MV2 **$\Delta${varMV2['Name']}:** {dir_text(soln[1])} by {soln[1]:.0f} {varMV2['UOM']}
+            # """, unsafe_allow_html=True)
+
+        # st.divider()
         if st.session_state["shade_MV1"]:
             st.latex(rf"""
                 \text{{{varMV1['Name']} Constraint: }} {MV1LoSS} \leq {{{st.session_state['MV1SSVal']:.2f}}} + \Delta\text{{{varMV1['Name']}}} \leq {MV1HiSS}
@@ -717,6 +842,16 @@ with tab1:
                 Optimum $${varMV1['Name']}^{{OPT}} = {st.session_state['MV1SSVal'] + soln[0]:.2f}$$ {varMV1['UOM']}
 
                 Optimum $${varMV2['Name']}^{{OPT}} = {st.session_state['MV2SSVal'] + soln[1]:.2f}$$ {varMV2['UOM']}
+            """)
+
+
+        if st.session_state["shade_feasible"]:
+            st.info("""
+                #### Feasible Region
+                Each MV/CV high limit and low limit can be plotted as a shaded region between 2 straight lines.\
+                If we take the intersection of all shaded regions formed by each constraint,\
+                we get the feasible region or solution space.\
+                The feasible region tells us that DMC is allowed to make MV moves on $\Delta MV_1$ and $\Delta MV_2$ within that space without violating any limits.                
             """)
 
         # st.header("Optimization Case Studies")
