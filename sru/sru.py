@@ -20,7 +20,7 @@ varMV2 = {'Name': 'FG', 'UOM': 'SCFH', 'Cost': 0.1, 'SSVal':900.0, 'Limits': (40
 
 varCV1 = {'Name': 'P', 'UOM': 'psi', 'SSVal':8.6, 'Limits': (7.0, 9.0), 'EngLimits': (6.0, 10.0), 'TYPMOV': 0.1}
 varCV2 = {'Name': 'dP', 'UOM': 'psi', 'SSVal':10.5, 'Limits': (8.0, 14.0), 'EngLimits': (0.0, 20.0), 'TYPMOV': 0.1}
-varCV3 = {'Name': 'Temp', 'UOM': '°F', 'SSVal':2120, 'Limits': (2100, 2150), 'EngLimits': (2050, 2200), 'TYPMOV': 1}
+varCV3 = {'Name': 'Temp', 'UOM': "°F", 'SSVal':2120, 'Limits': (2100, 2150), 'EngLimits': (2050, 2200), 'TYPMOV': 1}
 
 varFF1 = {'Name':'AC155.CO % (H2S-2*SO2)' ,'UOM':'%', 'SSVal': 50}
 varFF2 = {'Name':'Amine Acid Gas' ,'UOM':'MSCFH', 'SSVal': 27.5}
@@ -61,56 +61,56 @@ with st.sidebar:
     st.title('LP-DMC Simulation')
     st.text("Model & Tuning Parameters")
     with st.expander('Gain Matrix (MV-CV)'):
-        st.number_input(f'$G_{{11}}$: {varMV1['Name']} vs. {varCV1['Name']}', key="G11", value=-0.1131, step=0.02, format="%.4f")
-        st.number_input(f'$G_{{12}}$: {varMV2['Name']} vs. {varCV1['Name']}', key="G12", value=0.00122, step=0.001, format="%.4f")
-        st.number_input(f'$G_{{21}}$: {varMV1['Name']} vs. {varCV2['Name']}', key="G21", value=-0.5649, step=0.10, format="%.4f")
-        st.number_input(f'$G_{{22}}$: {varMV2['Name']} vs. {varCV2['Name']}', key="G22", value=0.00188, step=0.001, format="%.4f")
-        st.number_input(f'$G_{{31}}$: {varMV1['Name']} vs. {varCV3['Name']}', key="G31", value=3.0882, step=0.5, format="%.4f")
-        st.number_input(f'$G_{{32}}$: {varMV2['Name']} vs. {varCV3['Name']}', key="G32", value=0.0782, step=0.01, format="%.4f")
+        st.number_input(f"$G_{{11}}$: {varMV1['Name']} vs. {varCV1['Name']}", key="G11", value=-0.1131, step=0.02, format="%.4f")
+        st.number_input(f"$G_{{12}}$: {varMV2['Name']} vs. {varCV1['Name']}", key="G12", value=0.00122, step=0.001, format="%.4f")
+        st.number_input(f"$G_{{21}}$: {varMV1['Name']} vs. {varCV2['Name']}", key="G21", value=-0.5649, step=0.10, format="%.4f")
+        st.number_input(f"$G_{{22}}$: {varMV2['Name']} vs. {varCV2['Name']}", key="G22", value=0.00188, step=0.001, format="%.4f")
+        st.number_input(f"$G_{{31}}$: {varMV1['Name']} vs. {varCV3['Name']}", key="G31", value=3.0882, step=0.5, format="%.4f")
+        st.number_input(f"$G_{{32}}$: {varMV2['Name']} vs. {varCV3['Name']}", key="G32", value=0.0782, step=0.01, format="%.4f")
     with st.expander('LP Costs'):
-        st.number_input(rf'{varMV1['Name']} Cost', step=0.5, key="MV1Cost")
-        st.number_input(rf'{varMV2['Name']} Cost', step=0.02, key="MV2Cost")
+        st.number_input(rf"{varMV1['Name']} Cost", step=0.5, key="MV1Cost")
+        st.number_input(rf"{varMV2['Name']} Cost", step=0.02, key="MV2Cost")
     with st.expander('Feedforward Gains'):
-        st.number_input(f'$G_{{13}}$: {varFF1['Name']} vs. {varCV1['Name']}', key="G13", value=0.08096, step=0.1, format="%.4f")
-        st.number_input(f'$G_{{14}}$: {varFF2['Name']} vs. {varCV1['Name']}', key="G14", value=0.19803, step=0.1, format="%.4f")
-        st.number_input(f'$G_{{15}}$: {varFF3['Name']} vs. {varCV1['Name']}', key="G15", value=0.31035, step=0.1, format="%.4f")
-        st.number_input(f'$G_{{23}}$: {varFF1['Name']} vs. {varCV2['Name']}', key="G23", value=0.20909, step=0.1, format="%.4f")
-        st.number_input(f'$G_{{24}}$: {varFF2['Name']} vs. {varCV2['Name']}', key="G24", value=0.26042, step=0.1, format="%.4f")
-        st.number_input(f'$G_{{25}}$: {varFF3['Name']} vs. {varCV2['Name']}', key="G25", value=0.14858, step=0.1, format="%.4f")
-        st.number_input(f'$G_{{33}}$: {varFF1['Name']} vs. {varCV3['Name']}', key="G33", value=9.97798, step=1.0, format="%.4f")
-        st.number_input(f'$G_{{34}}$: {varFF2['Name']} vs. {varCV3['Name']}', key="G34", value=1.42339, step=1.0, format="%.4f")
-        st.number_input(f'$G_{{25}}$: {varFF3['Name']} vs. {varCV3['Name']}', key="G35", value=4.38991, step=1.0, format="%.4f")
+        st.number_input(f"$G_{{13}}$: {varFF1['Name']} vs. {varCV1['Name']}", key="G13", value=0.08096, step=0.1, format="%.4f")
+        st.number_input(f"$G_{{14}}$: {varFF2['Name']} vs. {varCV1['Name']}", key="G14", value=0.19803, step=0.1, format="%.4f")
+        st.number_input(f"$G_{{15}}$: {varFF3['Name']} vs. {varCV1['Name']}", key="G15", value=0.31035, step=0.1, format="%.4f")
+        st.number_input(f"$G_{{23}}$: {varFF1['Name']} vs. {varCV2['Name']}", key="G23", value=0.20909, step=0.1, format="%.4f")
+        st.number_input(f"$G_{{24}}$: {varFF2['Name']} vs. {varCV2['Name']}", key="G24", value=0.26042, step=0.1, format="%.4f")
+        st.number_input(f"$G_{{25}}$: {varFF3['Name']} vs. {varCV2['Name']}", key="G25", value=0.14858, step=0.1, format="%.4f")
+        st.number_input(f"$G_{{33}}$: {varFF1['Name']} vs. {varCV3['Name']}", key="G33", value=9.97798, step=1.0, format="%.4f")
+        st.number_input(f"$G_{{34}}$: {varFF2['Name']} vs. {varCV3['Name']}", key="G34", value=1.42339, step=1.0, format="%.4f")
+        st.number_input(f"$G_{{25}}$: {varFF3['Name']} vs. {varCV3['Name']}", key="G35", value=4.38991, step=1.0, format="%.4f")
 
     st.subheader('MV Limits')
     st.slider(rf"{varMV1['Name']} Limits ({varMV1['UOM']})", varMV1['EngLimits'][0], varMV1['EngLimits'][1], step=varMV1['TYPMOV'], key="MV1Limits")
-    st.number_input(rf'Current Value', step=varMV1['TYPMOV'], key="MV1SSVal")
+    st.number_input(r'Current Value', step=varMV1['TYPMOV'], key="MV1SSVal")
     st.divider()
 
     st.slider(rf"{varMV2['Name']} Limits ({varMV2['UOM']})", varMV2['EngLimits'][0], varMV2['EngLimits'][1], step=varMV2['TYPMOV'], key="MV2Limits")
-    st.number_input(rf'Current Value', step=varMV2['TYPMOV'], key="MV2SSVal")
+    st.number_input(r'Current Value', step=varMV2['TYPMOV'], key="MV2SSVal")
     st.divider()
 
     st.subheader('CV Limits')
     st.slider(rf"{varCV1['Name']} ({varCV1['UOM']})", varCV1['EngLimits'][0], varCV1['EngLimits'][1], step=varCV1['TYPMOV'], key="CV1Limits")
-    st.number_input(rf'Current Value', step=varCV1['TYPMOV'], key="CV1SSVal")
+    st.number_input(r'Current Value', step=varCV1['TYPMOV'], key="CV1SSVal")
     st.divider()
 
     st.slider(rf"{varCV2['Name']} ({varCV2['UOM']})", varCV2['EngLimits'][0], varCV2['EngLimits'][1], step=varCV2['TYPMOV'], key="CV2Limits")
-    st.number_input(rf'Current Value', step=varCV2['TYPMOV'], key="CV2SSVal")
+    st.number_input(r'Current Value', step=varCV2['TYPMOV'], key="CV2SSVal")
     st.divider()
 
     st.slider(rf"{varCV3['Name']} ({varCV3['UOM']})", varCV3['EngLimits'][0], varCV3['EngLimits'][1], step=varCV3['TYPMOV'], key="CV3Limits")
-    st.number_input(rf'Current Value', step=varCV3['TYPMOV'], key="CV3SSVal")
+    st.number_input(r'Current Value', step=varCV3['TYPMOV'], key="CV3SSVal")
 
     st.divider()
 
     st.subheader('FF Disturbances')
-    st.number_input(rf'AC155.CO % (H2S-2*SO2)', step=0.1, key="FF1SSVal")
-    st.caption(f'{varFF1['Name']} Baseline: {varFF1['SSVal']}{varFF1['UOM']}')
-    st.number_input(rf'Amine Acid Gas (MSCFH)', step=0.1, key="FF2SSVal")
-    st.caption(f'{varFF2['Name']} Baseline: {varFF2['SSVal']} {varFF2['UOM']}')
-    st.number_input(rf'SWS Gas (MSCFH)', step=0.1, key="FF3SSVal")
-    st.caption(f'{varFF3['Name']} Baseline: {varFF3['SSVal']} {varFF3['UOM']}')
+    st.number_input(r'AC155.CO % (H2S-2*SO2)', step=0.1, key="FF1SSVal")
+    st.caption(f"{varFF1['Name']} Baseline: {varFF1['SSVal']}{varFF1['UOM']}")
+    st.number_input(r'Amine Acid Gas (MSCFH)', step=0.1, key="FF2SSVal")
+    st.caption(f"{varFF2['Name']} Baseline: {varFF2['SSVal']} {varFF2['UOM']}")
+    st.number_input(r'SWS Gas (MSCFH)', step=0.1, key="FF3SSVal")
+    st.caption(f"{varFF3['Name']} Baseline: {varFF3['SSVal']} {varFF3['UOM']}")
 
     # st.markdown('Last Updated: Siang Lim (Sept 2025). Source on [GitHub](https://github.com/csianglim/dmc-lp-streamlit).')
 
@@ -323,9 +323,9 @@ def dir_text(soln):
 
 def dollar_formatter(x, pos):
     if x < 0:
-        return f'\u2212${abs(x):,.0f}'
+        return f"\u2212${abs(x):,.0f}"
     else:
-        return f'${x:,.0f}'
+        return f"${x:,.0f}"
 
 o = {}
 # st.text(prob.constraints.items())
@@ -348,7 +348,7 @@ for var in ['MV1', 'MV2', 'CV1', 'CV2', 'CV3']:
 
 def color_constraint(val):
     color = 'lightblue' if 'Limit' in val else ''
-    return f'background-color: {color}'
+    return f"background-color: {color}"
 
 def highlight_lo(x):
     df2 = pd.DataFrame('', index=x.index, columns=x.columns)
@@ -396,11 +396,11 @@ df.loc['CV2', 'Delta'] = G21*soln[0]+G22*soln[1]
 df.loc['CV3', 'Delta'] = G31*soln[0]+G32*soln[1]
 
 df.rename(index={
-    'MV1': f'MV - {varMV1['Name']} ({varMV1['UOM']})', 
-    'MV2': f'MV - {varMV2['Name']} ({varMV2['UOM']})', 
-    'CV1': f'CV - {varCV1['Name']} ({varCV1['UOM']})', 
-    'CV2': f'CV - {varCV2['Name']} ({varCV2['UOM']})', 
-    'CV3': f'CV - {varCV3['Name']} ({varCV3['UOM']})'}, 
+    'MV1': f"MV - {varMV1['Name']} ({varMV1['UOM']})", 
+    'MV2': f"MV - {varMV2['Name']} ({varMV2['UOM']})", 
+    'CV1': f"CV - {varCV1['Name']} ({varCV1['UOM']})", 
+    'CV2': f"CV - {varCV2['Name']} ({varCV2['UOM']})", 
+    'CV3': f"CV - {varCV3['Name']} ({varCV3['UOM']})"}, 
     inplace=True)
 
 df = df.style.apply(highlight_lo, axis=None, subset=['Status', 'LoLim'])\
@@ -432,10 +432,10 @@ def plotLP(showVector=True, showOptimum=True):
     ax.axvline(x=0, color='black', lw=0.2, linestyle='-')
     ax.axhline(y=0, color='black', lw=0.2, linestyle='-')
 
-    m1l = ax.axvline(x=MV1Lo, color='olive', lw=1, linestyle='--', label=f'MV1_Lo')
-    m1h = ax.axvline(x=MV1Hi, color='olive', lw=1, linestyle='-', label=f'MV1_Hi')
-    m2l = ax.axhline(y=MV2Lo, color='olive', lw=1, linestyle='--', label=f'MV2_Lo')
-    m2h = ax.axhline(y=MV2Hi, color='olive', lw=1, linestyle='-', label=f'MV2_Hi')
+    m1l = ax.axvline(x=MV1Lo, color='olive', lw=1, linestyle='--', label=f"MV1_Lo")
+    m1h = ax.axvline(x=MV1Hi, color='olive', lw=1, linestyle='-', label=f"MV1_Hi")
+    m2l = ax.axhline(y=MV2Lo, color='olive', lw=1, linestyle='--', label=f"MV2_Lo")
+    m2h = ax.axhline(y=MV2Hi, color='olive', lw=1, linestyle='-', label=f"MV2_Hi")
 
     ax.plot(0,0,'kx');
 
@@ -475,7 +475,7 @@ def plotLP(showVector=True, showOptimum=True):
 
             # Create a new axes below the main plot
             cbar_ax = fig.add_axes([pos.x0, pos.y0 - 0.13, pos.width, 0.03])  # 0.05 below 
-            cbar = fig.colorbar(q, cax=cbar_ax, orientation='horizontal', label="Profit ($) this minute")
+            cbar = fig.colorbar(q, cax=cbar_ax, orientation='horizontal', label="Profit ($) for this move")
             if vmin < 0 and vmax > 0:
                 cbar.set_ticks([vmin, vmin*3/4, vmin/2, vmin/4, 0, vmax/4, vmax/2, vmax*3/4, vmax])
             cbar_ax.xaxis.set_major_formatter(dollar_formatter)
@@ -496,9 +496,9 @@ def plotLP(showVector=True, showOptimum=True):
 
     ax.legend(
         [(c1h, c1l), (c2h, c2l), (c3h, c3l), m1l], 
-        [f'CV1: {varCV1['Name']}',
-         f'CV2: {varCV2['Name']}',
-         f'CV3: {varCV3['Name']}',
+        [f"CV1: {varCV1['Name']}",
+         f"CV2: {varCV2['Name']}",
+         f"CV3: {varCV3['Name']}",
          'MV Limits'],
         handler_map={tuple: HandlerTuple(ndivide=None)},
         loc='lower center', 
@@ -528,10 +528,10 @@ with tab2:
         G31 = st.session_state["G31"]
         G32 = st.session_state["G32"]
 
-        varvals = {f'{varMV1['Name']}': [G11, G21, G31], f'{varMV2['Name']}': [G12, G22, G32]}
+        varvals = {f"{varMV1['Name']}": [G11, G21, G31], f"{varMV2['Name']}": [G12, G22, G32]}
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            st.dataframe(pd.DataFrame(varvals, index=[f'{varCV1['Name']}', f'{varCV2['Name']}', f'{varCV3['Name']}']).style.format("{:.3f}"))
+            st.dataframe(pd.DataFrame(varvals, index=[f"{varCV1['Name']}", f"{varCV2['Name']}", f"{varCV3['Name']}"]).style.format("{:.3f}"))
 
         st.markdown("The equation relating the CVs and MVs through the gain matrix is given by:")
         st.latex(r"\Delta CV = G \cdot \Delta MV")  
