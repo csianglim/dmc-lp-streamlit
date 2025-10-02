@@ -63,6 +63,8 @@ def initialize_session_state():
         st.session_state["show_optimum"] = False
         st.session_state["show_vectors"] = False
         st.session_state["show_isoprofit"] = False
+        st.session_state["show_MV"] = True
+        st.session_state["show_CV"] = True
 
 # ============================================================================
 # SIDEBAR CONFIGURATION
@@ -412,44 +414,44 @@ def plot_lp(gains, deltas, solution, objective_value, status):
     """Create the main LP visualization plot"""
     fig, ax = plt.subplots(figsize=(5, 5))
     
+    # Plot axes
+    ax.axvline(x=0, color='black', lw=0.2, linestyle='-')
+    ax.axhline(y=0, color='black', lw=0.2, linestyle='-')
+    ax.plot(0, 0, 'kx')
+
     x, y, masks, feasible = create_constraint_masks(gains, deltas)
     xspace, lines = calculate_constraint_lines(gains, deltas)
     
+    # Plot MV limits
+    m1l = ax.axvline(x=deltas['MV1Lo'], color='olive', lw=1, linestyle='--', visible=st.session_state["show_MV"])
+    ax.axvline(x=deltas['MV1Hi'], color='olive', lw=1, linestyle='-', visible=st.session_state["show_MV"])
+    ax.axhline(y=deltas['MV2Lo'], color='olive', lw=1, linestyle='--', visible=st.session_state["show_MV"])
+    ax.axhline(y=deltas['MV2Hi'], color='olive', lw=1, linestyle='-', visible=st.session_state["show_MV"])
+
     # Shade regions if requested
     if st.session_state["shade_MV1"]:
         ax.imshow(masks['m1'], extent=(x.min(),x.max(),y.min(),y.max()), 
-                 aspect='auto', origin="lower", cmap=mcolors.ListedColormap(['none', 'yellow']), alpha=0.10)
+                 aspect='auto', origin="lower", cmap=mcolors.ListedColormap(['none', 'yellow']), alpha=0.10, visible=st.session_state["show_MV"])
     if st.session_state["shade_MV2"]:
         ax.imshow(masks['m2'], extent=(x.min(),x.max(),y.min(),y.max()), 
-                 aspect='auto', origin="lower", cmap=mcolors.ListedColormap(['none', 'yellow']), alpha=0.10)
+                 aspect='auto', origin="lower", cmap=mcolors.ListedColormap(['none', 'yellow']), alpha=0.10, visible=st.session_state["show_MV"])
     
     cv_colors = ['Reds', 'Blues', 'Greens']
     for cv_idx in range(1, 4):
         if st.session_state[f"shade_CV{cv_idx}"]:
             cv_mask = masks[f'c{2*cv_idx-1}'] & masks[f'c{2*cv_idx}']
             ax.imshow(cv_mask.astype(int), extent=(x.min(),x.max(),y.min(),y.max()), 
-                     aspect='auto', origin="lower", cmap=cv_colors[cv_idx-1], alpha=0.15)
+                     aspect='auto', origin="lower", cmap=cv_colors[cv_idx-1], alpha=0.15, visible=st.session_state["show_CV"])
     
     # Plot constraint lines
     line_handles = []
     colors = ['r', 'b', 'g']
     for cv_idx in range(1, 4):
-        hi, = ax.plot(xspace, lines[f'y_c{2*cv_idx-1}'], f'-{colors[cv_idx-1]}')
-        lo, = ax.plot(xspace, lines[f'y_c{2*cv_idx}'], f'--{colors[cv_idx-1]}')
+        hi, = ax.plot(xspace, lines[f'y_c{2*cv_idx-1}'], f'-{colors[cv_idx-1]}', visible=st.session_state["show_CV"])
+        lo, = ax.plot(xspace, lines[f'y_c{2*cv_idx}'], f'--{colors[cv_idx-1]}', visible=st.session_state["show_CV"])
         line_handles.append((hi, lo))
-    
-    # Plot axes
-    ax.axvline(x=0, color='black', lw=0.2, linestyle='-')
-    ax.axhline(y=0, color='black', lw=0.2, linestyle='-')
-    
-    # Plot MV limits
-    m1l = ax.axvline(x=deltas['MV1Lo'], color='olive', lw=1, linestyle='--')
-    ax.axvline(x=deltas['MV1Hi'], color='olive', lw=1, linestyle='-')
-    ax.axhline(y=deltas['MV2Lo'], color='olive', lw=1, linestyle='--')
-    ax.axhline(y=deltas['MV2Hi'], color='olive', lw=1, linestyle='-')
-    
-    ax.plot(0, 0, 'kx')
-    
+
+
     # Plot optimum and isoprofit line
     if LpStatus[status] == "Optimal":
         if st.session_state["show_optimum"]:
@@ -473,7 +475,7 @@ def plot_lp(gains, deltas, solution, objective_value, status):
              aspect='auto', origin="lower", cmap="binary", alpha=0.10)
     if st.session_state["shade_feasible"]:
         ax.contourf(x, y, feasible.astype(int), levels=[0.5, 1], colors=['none'], hatches=["///"], alpha=0)
-    
+        
     # Set plot properties
     ax.set_xlim((-PLOT_LIMITS['x'], PLOT_LIMITS['x']))
     ax.set_ylim((-PLOT_LIMITS['y'], PLOT_LIMITS['y']))
@@ -601,6 +603,8 @@ def render_linear_program_tab():
         st.latex(r"\Delta\text{CV}_{1, \text{LL}} \leq \Delta \text{CV}_{1} \leq \Delta \text{CV}_{1, \text{UL}}\\\Delta\text{CV}_{2, \text{LL}} \leq \Delta \text{CV}_{2} \leq \Delta \text{CV}_{2, \text{UL}}\\\Delta\text{CV}_{3, \text{LL}} \leq \Delta \text{CV}_{3} \leq \Delta \text{CV}_{3, \text{UL}}")
         st.markdown("Since the CVs are related to the MVs by the gain matrix, we can substitute the equations to get CV limits in terms of MV movements:")
         st.latex(r"G_{11} \Delta \text{MV}_{1} + G_{12} \Delta \text{MV}_{2} \leq \Delta \text{CV}_{1, \text{UL}}\\G_{11} \Delta \text{MV}_{1} + G_{12} \Delta \text{MV}_{2} \geq \Delta \text{CV}_{1, \text{LL}}\\G_{21} \Delta \text{MV}_{1} + G_{22} \Delta \text{MV}_{2} \leq \Delta \text{CV}_{2, \text{UL}} \\G_{21} \Delta \text{MV}_{1} + G_{22} \Delta \text{MV}_{2} \geq \Delta \text{CV}_{2, \text{LL}} \\")
+    # with cols[1]:
+    #     st.pyplot(fig1)
 
 def render_lp_costs_tab(gains, deltas, solution, objective_value, status, fig):
     """Render the LP Costs explanation tab"""
@@ -656,16 +660,22 @@ def render_simulation_tab(gains, deltas, solution, objective_value, status, cons
         with col4:
             st.checkbox("Iso-Profit Line", key='show_isoprofit')
         
-        col1, col2, col3, col4, col5 = st.columns(5)
+        col1, col2, col3, col4 = st.columns(4)
         with col1:
-            st.checkbox(f"MV1: {VARIABLES['MV1']['Name']}", key='shade_MV1')
+            st.checkbox(f"Show MVs", key='show_MV')
         with col2:
-            st.checkbox(f"MV2: {VARIABLES['MV2']['Name']}", key='shade_MV2')
+            st.checkbox(f"MV1: {VARIABLES['MV1']['Name']}", key='shade_MV1')
         with col3:
+            st.checkbox(f"MV2: {VARIABLES['MV2']['Name']}", key='shade_MV2')
+
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.checkbox(f"Show CVs", key='show_CV')        
+        with col2:
             st.checkbox(f"CV1: {VARIABLES['CV1']['Name']}", key='shade_CV1')
-        with col4:
+        with col3:
             st.checkbox(f"CV2: {VARIABLES['CV2']['Name']}", key='shade_CV2')
-        with col5:
+        with col4:
             st.checkbox(f"CV3: {VARIABLES['CV3']['Name']}", key='shade_CV3')
         
         if st.session_state["shade_MV1"] or st.session_state["shade_MV2"]:
@@ -761,7 +771,8 @@ def main():
     
     # Create plot
     fig = plot_lp(gains, deltas, solution, objective_value, status)
-    
+    # fig1 = plot_lp(gains, deltas, solution, objective_value, status, showMV=False, showCV=False, showFeasible=False)
+
     # Render tabs
     tab1, tab2, tab3, tab4 = st.tabs(["📈 Simulation", "🕵 Gain Matrix", "🕵 Linear Program", "🕵 LP Costs"])
     
