@@ -256,19 +256,22 @@ def solve_lp(gains, deltas):
 # DATA PROCESSING
 # ============================================================================
 
+def isConstrained(constraints_info, var):
+    loslack = constraints_info[f'{var}_Low_Limit']['slack']
+    hislack = constraints_info[f'{var}_High_Limit']['slack']
+    
+    if np.isclose(abs(loslack), 0, rtol=1e-20):
+        return "Lo Limit"
+    elif np.isclose(abs(hislack), 0, rtol=1e-20):
+        return "Hi Limit"
+    else:
+        return "Normal"
+
 def calculate_constraint_status(constraints_info):
     """Determine which variables are at their limits"""
     constrained = {}
     for var in ['MV1', 'MV2', 'CV1', 'CV2', 'CV3']:
-        loslack = constraints_info[f'{var}_Low_Limit']['slack']
-        hislack = constraints_info[f'{var}_High_Limit']['slack']
-        
-        if np.isclose(abs(loslack), 0, rtol=1e-20):
-            constrained[var] = "Lo Limit"
-        elif np.isclose(abs(hislack), 0, rtol=1e-20):
-            constrained[var] = "Hi Limit"
-        else:
-            constrained[var] = "Normal"
+        constrained[var] = isConstrained(constraints_info, var)
     
     return constrained
 
@@ -413,7 +416,7 @@ def create_constraint_masks(gains, deltas):
     
     return x, y, masks, feasible
 
-def plot_lp(gains, deltas, solution, objective_value, status):
+def plot_lp(gains, deltas, solution, objective_value, status, constraints_info):
     """Create the main LP visualization plot"""
     fig, ax = plt.subplots(figsize=(5, 5))
     
@@ -448,12 +451,22 @@ def plot_lp(gains, deltas, solution, objective_value, status):
     
     # Plot constraint lines
     line_handles = []
+    line_labels = []
     colors = ['r', 'b', 'g']
     for cv_idx in range(1, 4):
         hi, = ax.plot(xspace, lines[f'y_c{2*cv_idx-1}'], f'-{colors[cv_idx-1]}', visible=st.session_state["show_CV"])
         lo, = ax.plot(xspace, lines[f'y_c{2*cv_idx}'], f'--{colors[cv_idx-1]}', visible=st.session_state["show_CV"])
-        line_handles.append((hi, lo))
+        # line_handles.append((hi, lo))
+        line_handles.extend([hi, lo])
 
+        constraint = isConstrained(constraints_info, f"CV{cv_idx}")
+        constrainthi_label = f"*{VARIABLES[f'CV{cv_idx}']['Name']} HI" if constraint == "Hi Limit" else f"{VARIABLES[f'CV{cv_idx}']['Name']} HI"
+        constraintlo_label = f"*{VARIABLES[f'CV{cv_idx}']['Name']} LO" if constraint == "Lo Limit" else f"{VARIABLES[f'CV{cv_idx}']['Name']} LO"
+        
+        line_labels.extend([
+            constrainthi_label,
+            constraintlo_label
+        ])
 
     # Plot optimum and isoprofit line
     if LpStatus[status] == "Optimal":
@@ -520,12 +533,23 @@ def plot_lp(gains, deltas, solution, objective_value, status):
     ax.yaxis.set_major_formatter(StrMethodFormatter('{x:,.0f}'))
     
     # Legend
-    ax.legend(
-        line_handles + [m1l],
-        [f"CV{i}: {VARIABLES[f'CV{i}']['Name']}" for i in range(1, 4)] + ['MV Limits'],
-        handler_map={tuple: HandlerTuple(ndivide=None)},
-        loc='lower center', bbox_to_anchor=(0.5, 1.08), ncol=5
-    )
+    # Add MV limit handle
+    mv_constraints = []
+    for mvlabel in ['MV1', 'MV2']:
+        mv_constraints.append(isConstrained(constraints_info, mvlabel))
+
+    if any(c != 'Normal' for c in mv_constraints):
+        line_labels.append('*MV Limits')
+    else:
+        line_labels.append('MV Limits')
+
+    line_handles.append(m1l)
+    leg = ax.legend(line_handles, line_labels, loc='lower center', bbox_to_anchor=(0.5, 1.08), ncol=4)
+
+    for txt in leg.get_texts():
+        s = txt.get_text()
+        if '*' in txt.get_text():
+            txt.set_bbox(dict(facecolor='#ff99ff', edgecolor='none', pad=2))
 
     return fig
 
@@ -804,7 +828,7 @@ def main():
     df_styled, df_ff_styled = style_dataframes(df, df_ff)
     
     # Create plot
-    fig = plot_lp(gains, deltas, solution, objective_value, status)
+    fig = plot_lp(gains, deltas, solution, objective_value, status, constraints_info)
     # fig1 = plot_lp(gains, deltas, solution, objective_value, status, showMV=False, showCV=False, showFeasible=False)
 
     # Render tabs

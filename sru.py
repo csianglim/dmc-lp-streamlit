@@ -455,7 +455,37 @@ def plot_lp(gains, deltas, solution, objective_value, status):
     # Plot optimum and isoprofit line
     if LpStatus[status] == "Optimal":
         if st.session_state["show_optimum"]:
-            ax.plot(solution[0], solution[1], 'Dk', ms=6)
+            ax.axvline(x=solution[0], color='k', lw=0.75, linestyle='--')
+            ax.axhline(y=solution[1], color='k', lw=0.75, linestyle='--')
+            ax.plot(solution[0], solution[1], 'Dk', ms=6, markeredgecolor='w', markeredgewidth=0.5)
+
+            # Vertical bracket on right OUTSIDE plot limits for ΔMV2
+            xlim = PLOT_LIMITS['x']
+            x_bracket_right = xlim * 1.05  # Position outside the plot area
+            bracket_width = xlim * 0.03
+            ax.annotate("", (x_bracket_right, solution[1]), (x_bracket_right, 0),
+                        arrowprops=dict(arrowstyle="->", color="k", lw=1.0, shrinkA=0, shrinkB=0),
+                        annotation_clip=False)
+            ax.plot([x_bracket_right - bracket_width, x_bracket_right + bracket_width], [0, 0], 'k-', lw=1, clip_on=False)
+            ax.text(x_bracket_right + bracket_width*1.5, solution[1]/2, 
+                   f'$\Delta${VARIABLES['MV2']['Name']} = {solution[1]:.1f} {VARIABLES['MV2']['UOM']}', ha='left', va='center', fontsize=9, rotation=90, clip_on=False, color='k')
+
+            # Horizontal bracket
+            ylim = PLOT_LIMITS['y']
+            y_bracket_top = ylim * 1.05      # slightly above the plot
+            bracket_height = ylim * 0.03
+
+            # horizontal arrow
+            ax.annotate("", (solution[0], y_bracket_top), (0, y_bracket_top),
+                        arrowprops=dict(arrowstyle="->", color="k", lw=1.0, shrinkA=0, shrinkB=0),
+                        annotation_clip=False)
+
+            # # vertical caps at ends
+            ax.plot([0, 0], [y_bracket_top - bracket_height, y_bracket_top + bracket_height], 'k-', lw=1, clip_on=False)
+
+            # label centered above arrow
+            ax.text(solution[0]/2, y_bracket_top + bracket_height*1.5,
+                    f'$\Delta${VARIABLES['MV1']['Name']} = {solution[0]:.2f} {VARIABLES['MV1']['UOM']}', ha='center', va='bottom', fontsize=9, clip_on=False, color='k')
         
         if st.session_state["show_isoprofit"]:
             xspace_line = np.linspace(-PLOT_LIMITS['x'], PLOT_LIMITS['x'], 10)
@@ -490,7 +520,7 @@ def plot_lp(gains, deltas, solution, objective_value, status):
         line_handles + [m1l],
         [f"CV{i}: {VARIABLES[f'CV{i}']['Name']}" for i in range(1, 4)] + ['MV Limits'],
         handler_map={tuple: HandlerTuple(ndivide=None)},
-        loc='lower center', bbox_to_anchor=(0.5, 1.02), ncol=5
+        loc='lower center', bbox_to_anchor=(0.5, 1.08), ncol=5
     )
     
     return fig
@@ -654,11 +684,11 @@ def render_simulation_tab(gains, deltas, solution, objective_value, status, cons
         with col1:
             st.checkbox("Shade Feasible", key='shade_feasible')
         with col2:
-            st.checkbox("Optimum Point", key='show_optimum')
-        with col3:
             st.checkbox("Profit Direction", key='show_vectors')
-        with col4:
+        with col3:
             st.checkbox("Iso-Profit Line", key='show_isoprofit')
+        with col4:
+            st.checkbox("Optimum Point", key='show_optimum')
         
         col1, col2, col3, col4 = st.columns(4)
         with col1:
