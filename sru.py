@@ -546,7 +546,7 @@ def plot_lp(gains, deltas, solution, objective_value, status, constraints_info):
     for txt in leg.get_texts():
         s = txt.get_text()
         if '*' in txt.get_text():
-            txt.set_bbox(dict(facecolor='#ff99ff', edgecolor='none', pad=2))
+            txt.set_bbox(dict(facecolor='lightblue', edgecolor='none', pad=2))
 
     return fig
 
