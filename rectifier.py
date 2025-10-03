@@ -275,11 +275,11 @@ def calculate_constraint_status(constraints_info):
     
     return constrained
 
-def dir_text(value):
+def dir_text(value, tol=1e-3):
     """Generate directional text with color coding"""
-    if value > 0:
+    if value > tol:
         return "<span style='color:blue'>⬆</span> Up"
-    elif value < 0:
+    elif value < -tol:
         return "<span style='color:red'>⬇</span> Down"
     else:
         return "<span style='color:black'>-</span>"
