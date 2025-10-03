@@ -294,9 +294,9 @@ def create_solution_dataframe(solution, gains, constrained):
             var = f'{var_type}{idx}'
             lo, hi = st.session_state[f"{var}Limits"]
             df.loc[var, 'LoLim'] = lo
-            df.loc[var, 'HiLim'] = hi
+            df.loc[var, 'HiLim'] = hi            
             df.loc[var, 'PV'] = st.session_state[f'{var}SSVal']
-    
+
     # Calculate SS targets and deltas
     for i, mv in enumerate(['MV1', 'MV2'], 1):
         df.loc[mv, 'SSTarget'] = solution[i-1] + st.session_state[f'{mv}SSVal']
@@ -310,6 +310,7 @@ def create_solution_dataframe(solution, gains, constrained):
         df.loc[cv, 'Delta'] = delta_cv
         df.loc[cv, 'Move'] = dir_text(delta_cv)
     
+    df = df.loc[:, ['Status', 'Move', 'LoLim', 'PV', 'SSTarget', 'HiLim', 'Delta']]
     # Rename indices
     rename_dict = {
         f'{vt}{i}': f"{vt} - {VARIABLES[f'{vt}{i}']['Name']} ({VARIABLES[f'{vt}{i}']['UOM']})"
