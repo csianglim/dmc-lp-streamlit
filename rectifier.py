@@ -438,17 +438,17 @@ def plot_lp(gains, deltas, solution, objective_value, status, constraints_info):
     # Shade regions if requested
     if st.session_state["shade_MV1"]:
         ax.imshow(masks['m1'], extent=(x.min(),x.max(),y.min(),y.max()), 
-                 aspect='auto', origin="lower", cmap=mcolors.ListedColormap(['none', 'yellow']), alpha=0.10, visible=st.session_state["show_MV"])
+                 aspect='auto', origin="lower", cmap=mcolors.ListedColormap(['none', 'yellow']), alpha=0.10)
     if st.session_state["shade_MV2"]:
         ax.imshow(masks['m2'], extent=(x.min(),x.max(),y.min(),y.max()), 
-                 aspect='auto', origin="lower", cmap=mcolors.ListedColormap(['none', 'yellow']), alpha=0.10, visible=st.session_state["show_MV"])
+                 aspect='auto', origin="lower", cmap=mcolors.ListedColormap(['none', 'yellow']), alpha=0.10)
     
     cv_colors = ['Reds', 'Blues', 'Greens']
     for cv_idx in range(1, 4):
         if st.session_state[f"shade_CV{cv_idx}"]:
             cv_mask = masks[f'c{2*cv_idx-1}'] & masks[f'c{2*cv_idx}']
             ax.imshow(cv_mask.astype(int), extent=(x.min(),x.max(),y.min(),y.max()), 
-                     aspect='auto', origin="lower", cmap=cv_colors[cv_idx-1], alpha=0.15, visible=st.session_state["show_CV"])
+                     aspect='auto', origin="lower", cmap=cv_colors[cv_idx-1], alpha=0.15)
     
     # Plot constraint lines
     line_handles = []
