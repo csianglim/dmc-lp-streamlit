@@ -20,21 +20,21 @@ st.set_page_config(layout="wide")
 # Variable definitions
 VARIABLES = {
     'MV1': {'Name': 'STM', 'UOM': 'klb/h', 'Cost': -40, 'SSVal': 10.5, 
-            'Limits': (8.5, 12.5), 'EngLimits': (5.0, 15.0), 'TYPMOV': 0.01},
+            'Limits': (9.4, 12.5), 'EngLimits': (5.0, 15.0), 'TYPMOV': 0.01},
     'MV2': {'Name': 'REFLUX', 'UOM': 'BPD', 'Cost': 0.1, 'SSVal': 2500, 
-            'Limits': (1500.0, 3600.0), 'EngLimits': (1000.0, 3800.0), 'TYPMOV': 0.1},
+            'Limits': (1500.0, 3000.0), 'EngLimits': (1000.0, 3800.0), 'TYPMOV': 0.1},
     'CV1': {'Name': 'RVP', 'UOM': 'psi', 'SSVal': 9.5,
-            'Limits': (9.0, 12.0), 'EngLimits': (8.0, 13.0), 'TYPMOV': 0.01},
-    'CV2': {'Name': 'PCT', 'UOM': '°F', 'SSVal': 160.0,
-            'Limits': (141.0, 175.0), 'EngLimits': (130.0, 180.0), 'TYPMOV': 0.1},
-    'CV3': {'Name': 'Valve', 'UOM': "%", 'SSVal': 80.0, 
+            'Limits': (9.0, 11.0), 'EngLimits': (8.0, 13.0), 'TYPMOV': 0.01},
+    'CV2': {'Name': 'PCT', 'UOM': '°F', 'SSVal': 165.0,
+            'Limits': (131.0, 175.0), 'EngLimits': (115.0, 200.0), 'TYPMOV': 0.1},
+    'CV3': {'Name': 'Valve', 'UOM': "%", 'SSVal': 60.0, 
             'Limits': (-5, 105.0), 'EngLimits': (-5.0, 105.0), 'TYPMOV': 0.1},
     'FF1': {'Name': 'DHT WILD NAP', 'UOM': 'BPD', 'SSVal': 1000},
     'FF2': {'Name': 'Crude OVHD', 'UOM': 'BPD', 'SSVal': 4000},
     'FF3': {'Name': 'SPLT OVHD', 'UOM': 'BPD', 'SSVal': 5500}
 }
 
-PLOT_LIMITS = {'x': 3, 'y': 1500}
+PLOT_LIMITS = {'x': 2.2, 'y': 1600}
 
 # ============================================================================
 # SESSION STATE INITIALIZATION
@@ -529,7 +529,7 @@ def plot_lp(gains, deltas, solution, objective_value, status, constraints_info):
     ax.set_xlabel(f"MV1 Move: $\Delta${VARIABLES['MV1']['Name']} ({VARIABLES['MV1']['UOM']})")
     ax.set_ylabel(f"MV2 Move: $\Delta${VARIABLES['MV2']['Name']} ({VARIABLES['MV2']['UOM']})")
     ax.set_aspect('auto')
-    ax.xaxis.set_major_formatter(StrMethodFormatter('{x:,.0f}'))
+    ax.xaxis.set_major_formatter(StrMethodFormatter('{x:,.1f}'))
     ax.yaxis.set_major_formatter(StrMethodFormatter('{x:,.0f}'))
     
     # Legend
