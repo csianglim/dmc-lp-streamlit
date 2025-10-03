@@ -26,7 +26,7 @@ VARIABLES = {
     'CV1': {'Name': 'RVP', 'UOM': 'psi', 'SSVal': 9.5,
             'Limits': (9.0, 12.0), 'EngLimits': (8.0, 13.0), 'TYPMOV': 0.01},
     'CV2': {'Name': 'PCT', 'UOM': '°F', 'SSVal': 160.0,
-            'Limits': (141.0, 180.0), 'EngLimits': (130.0, 180.0), 'TYPMOV': 0.1},
+            'Limits': (141.0, 175.0), 'EngLimits': (130.0, 180.0), 'TYPMOV': 0.1},
     'CV3': {'Name': 'Valve', 'UOM': "%", 'SSVal': 80.0, 
             'Limits': (-5, 105.0), 'EngLimits': (-5.0, 105.0), 'TYPMOV': 0.1},
     'FF1': {'Name': 'DHT WILD NAP', 'UOM': 'BPD', 'SSVal': 1000},
