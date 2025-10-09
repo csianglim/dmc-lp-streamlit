@@ -63,8 +63,9 @@ def initialize_session_state():
         st.session_state["show_optimum"] = False
         st.session_state["show_vectors"] = False
         st.session_state["show_isoprofit"] = False
-        st.session_state["show_MV"] = True
-        st.session_state["show_CV"] = True
+        st.session_state["show_MV"] = False
+        st.session_state["show_CV"] = False
+        st.session_state["show_solution"] = False
 
 # ============================================================================
 # SIDEBAR CONFIGURATION
@@ -427,10 +428,10 @@ def plot_lp(gains, deltas, solution, objective_value, status, constraints_info):
     xspace, lines = calculate_constraint_lines(gains, deltas)
     
     # Plot MV limits
-    m1l = ax.axvline(x=deltas['MV1Lo'], color='olive', lw=1, linestyle='--', visible=st.session_state["show_MV"])
-    ax.axvline(x=deltas['MV1Hi'], color='olive', lw=1, linestyle='-', visible=st.session_state["show_MV"])
-    ax.axhline(y=deltas['MV2Lo'], color='olive', lw=1, linestyle='--', visible=st.session_state["show_MV"])
-    ax.axhline(y=deltas['MV2Hi'], color='olive', lw=1, linestyle='-', visible=st.session_state["show_MV"])
+    m1l = ax.axvline(x=deltas['MV1Lo'], color='olive', lw=1, linestyle='--', visible=(st.session_state["show_MV"] or st.session_state["shade_MV1"]))
+    ax.axvline(x=deltas['MV1Hi'], color='olive', lw=1, linestyle='-', visible=(st.session_state["show_MV"] or st.session_state["shade_MV1"]))
+    ax.axhline(y=deltas['MV2Lo'], color='olive', lw=1, linestyle='--', visible=(st.session_state["show_MV"] or st.session_state["shade_MV2"]))
+    ax.axhline(y=deltas['MV2Hi'], color='olive', lw=1, linestyle='-', visible=(st.session_state["show_MV"] or st.session_state["shade_MV2"]))
 
     # Shade regions if requested
     if st.session_state["shade_MV1"]:
@@ -452,13 +453,13 @@ def plot_lp(gains, deltas, solution, objective_value, status, constraints_info):
     line_labels = []
     colors = ['r', 'b', 'g']
     for cv_idx in range(1, 4):
-        hi, = ax.plot(xspace, lines[f'y_c{2*cv_idx-1}'], f'-{colors[cv_idx-1]}', visible=st.session_state["show_CV"])
-        lo, = ax.plot(xspace, lines[f'y_c{2*cv_idx}'], f'--{colors[cv_idx-1]}', visible=st.session_state["show_CV"])
+        hi, = ax.plot(xspace, lines[f'y_c{2*cv_idx-1}'], f'-{colors[cv_idx-1]}', visible=(st.session_state["show_CV"] or st.session_state[f"shade_CV{cv_idx}"]))
+        lo, = ax.plot(xspace, lines[f'y_c{2*cv_idx}'], f'--{colors[cv_idx-1]}', visible=(st.session_state["show_CV"] or st.session_state[f"shade_CV{cv_idx}"]))
         line_handles.extend([hi, lo])
 
         constraint = isConstrained(constraints_info, f"CV{cv_idx}")
-        constrainthi_label = f"*{VARIABLES[f'CV{cv_idx}']['Name']} HI" if constraint == "Hi Limit" else f"{VARIABLES[f'CV{cv_idx}']['Name']} HI"
-        constraintlo_label = f"*{VARIABLES[f'CV{cv_idx}']['Name']} LO" if constraint == "Lo Limit" else f"{VARIABLES[f'CV{cv_idx}']['Name']} LO"
+        constrainthi_label = f"*{VARIABLES[f'CV{cv_idx}']['Name']} HI" if constraint == "Hi Limit" and st.session_state["show_solution"] else f"{VARIABLES[f'CV{cv_idx}']['Name']} HI"
+        constraintlo_label = f"*{VARIABLES[f'CV{cv_idx}']['Name']} LO" if constraint == "Lo Limit" and st.session_state["show_solution"] else f"{VARIABLES[f'CV{cv_idx}']['Name']} LO"
         
         line_labels.extend([
             constrainthi_label,
@@ -536,17 +537,19 @@ def plot_lp(gains, deltas, solution, objective_value, status, constraints_info):
         mv_constraints.append(isConstrained(constraints_info, mvlabel))
 
     if any(c != 'Normal' for c in mv_constraints):
-        line_labels.append('*MV Limits')
-    else:
-        line_labels.append('MV Limits')
+        if st.session_state["show_solution"]:
+            line_labels.append('*MV Limits')
+        else:
+            line_labels.append('MV Limits')
 
     line_handles.append(m1l)    
     leg = ax.legend(line_handles, line_labels, loc='lower center', bbox_to_anchor=(0.5, 1.08), ncol=4)
     
-    for txt in leg.get_texts():
-        s = txt.get_text()
-        if '*' in txt.get_text():
-            txt.set_bbox(dict(facecolor='lightblue', edgecolor='none', pad=2))
+    if st.session_state["show_solution"]:
+        for txt in leg.get_texts():
+            s = txt.get_text()
+            if '*' in txt.get_text():
+                txt.set_bbox(dict(facecolor='lightblue', edgecolor='none', pad=2))
 
     return fig
 
@@ -697,7 +700,7 @@ def render_lp_costs_tab(gains, deltas, solution, objective_value, status, fig):
             - Coodinates of Optimum Point: ({solution[0]:.3f}, {solution[1]:.3f})
         """, unsafe_allow_html=True)
 
-def render_simulation_tab(gains, deltas, solution, objective_value, status, constraints_info, df_styled, df_ff_styled, fig):
+def render_simulation_tab(gains, deltas, solution, objective_value, status, constraints_info, df, df_styled, df_ff_styled, fig):
     """Render the main simulation tab"""
     cols = st.columns([0.55, 0.45])
     
@@ -717,7 +720,7 @@ def render_simulation_tab(gains, deltas, solution, objective_value, status, cons
         
         col1, col2, col3, col4 = st.columns(4)
         with col1:
-            st.checkbox(f"Show MVs", key='show_MV')
+            st.checkbox(f"Show All MVs", key='show_MV')
         with col2:
             st.checkbox(f"MV1: {VARIABLES['MV1']['Name']}", key='shade_MV1')
         with col3:
@@ -725,7 +728,7 @@ def render_simulation_tab(gains, deltas, solution, objective_value, status, cons
 
         col1, col2, col3, col4 = st.columns(4)
         with col1:
-            st.checkbox(f"Show CVs", key='show_CV')        
+            st.checkbox(f"Show All CVs", key='show_CV')        
         with col2:
             st.checkbox(f"CV1: {VARIABLES['CV1']['Name']}", key='shade_CV1')
         with col3:
@@ -744,7 +747,15 @@ def render_simulation_tab(gains, deltas, solution, objective_value, status, cons
             st.error(f"⚠ Status: {LpStatus[status]}. No feasible LP solution found.")
         else:
             st.badge("LP Solution Table")
-            st.write(df_styled, unsafe_allow_html=True)
+            st.checkbox("Solve - Show LP Solution", key='show_solution')
+
+            if st.session_state["show_solution"]:
+                st.write(df_styled, unsafe_allow_html=True)
+            else:
+                df_nosol = df.loc[:, ['LoLim', 'PV', 'HiLim']]
+                df_styled_nosol = df_nosol.style.format(dict.fromkeys(df.select_dtypes('float').columns, "{:.2f}")).to_html()         
+                st.write(df_styled_nosol, unsafe_allow_html=True)
+
             st.badge("Feedforward Variables")
             st.write(df_ff_styled, unsafe_allow_html=True)
         
@@ -832,7 +843,7 @@ def main():
     tab1, tab2, tab3, tab4 = st.tabs(["📈 Simulation", "🕵 Gain Matrix", "🕵 Linear Program", "🕵 LP Costs"])
     
     with tab1:
-        render_simulation_tab(gains, deltas, solution, objective_value, status, constraints_info, 
+        render_simulation_tab(gains, deltas, solution, objective_value, status, constraints_info, df, 
                             df_styled, df_ff_styled, fig)
     
     with tab2:

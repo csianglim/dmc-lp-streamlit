@@ -520,9 +520,9 @@ def plot_lp(gains, deltas, solution, objective_value, status, constraints_info):
             plot_vector_field(ax, solution, objective_value, fig)
     
     # Plot feasible region
+    ax.imshow(feasible.astype(int), extent=(x.min(),x.max(),y.min(),y.max()), 
+         aspect='auto', origin="lower", cmap="binary", alpha=0.10)
     if st.session_state["shade_feasible"]:
-        ax.imshow(feasible.astype(int), extent=(x.min(),x.max(),y.min(),y.max()), 
-             aspect='auto', origin="lower", cmap="binary", alpha=0.10)
         ax.contourf(x, y, feasible.astype(int), levels=[0.5, 1], colors=['none'], hatches=["///"], alpha=0)
         
     # Set plot properties
