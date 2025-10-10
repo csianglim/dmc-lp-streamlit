@@ -543,8 +543,8 @@ def plot_lp(gains, deltas, solution, objective_value, status, constraints_info):
     if any(c != 'Normal' for c in mv_constraints):
         if st.session_state["show_solution"]:
             line_labels.append('*MV Limits')
-        else:
-            line_labels.append('MV Limits')
+    else:
+        line_labels.append('MV Limits')
 
     line_handles.append(m1l)
     leg = ax.legend(line_handles, line_labels, loc='lower center', bbox_to_anchor=(0.5, 1.08), ncol=4)
